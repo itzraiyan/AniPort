@@ -154,42 +154,77 @@ def choose_account_flow(known_username=None):
     """
     saved = list_saved_accounts()
     account_options = []
-    if known_username and known_username not in saved:
-        account_options.append(f"Add and use: {known_username} (not yet authorized)")
-    for uname in saved:
-        account_options.append(f"Use saved account: {uname}")
-    account_options.append("Add a different AniList account")
-    account_options.append("Remove a saved account")
-    idx = menu_boxed(
-        "Choose an AniList account for this operation:",
-        account_options
+    helpmsg = (
+        "Select an AniList account to use:\n"
+        "- Use saved account: Use an AniList account you have previously authorized.\n"
+        "- Add a new AniList account: Authorize a new AniList account and save it for future use.\n"
+        "- Remove a saved account: Delete an account from the saved list.\n"
+        "You can always add or remove accounts later."
     )
-    if known_username and idx == 1:
-        # Add and use known_username
-        uname, token = interactive_oauth(known_username)
-        return uname, token
-    saved_offset = 1 if known_username and known_username not in saved else 0
-    if idx <= len(saved) + saved_offset and idx > saved_offset:
-        uname = saved[idx-1-saved_offset]
-        token = get_saved_token(uname)
-        if token:
-            return uname, token
-        else:
-            print_error("Token missing or expired for that account. Please re-authorize.")
-            uname, token = interactive_oauth(uname)
-            return uname, token
-    elif idx == len(account_options) - 1:  # Remove a saved account
-        if not saved:
-            print_warning("No saved accounts to remove.")
-            return choose_account_flow(known_username)
-        remove_idx = menu_boxed(
-            "Select an account to remove:",
-            saved
-        )
-        remove_account(saved[remove_idx - 1])
-        print_info("Account removed.")
-        return choose_account_flow(known_username)
+
+    if not saved:
+        account_options.append("Add a new AniList account")
     else:
-        # Add a different account
-        uname, token = interactive_oauth()
-        return uname, token
+        if known_username and known_username not in saved:
+            account_options.append(f"Add and use: {known_username} (not yet authorized)")
+        for uname in saved:
+            account_options.append(f"Use saved account: {uname}")
+        account_options.append("Add a different AniList account")
+        account_options.append("Remove a saved account")
+
+    while True:
+        idx = menu_boxed(
+            "Choose an AniList account for this operation:",
+            account_options,
+            helpmsg=helpmsg
+        )
+        # No saved accounts
+        if not saved:
+            if idx == 1:
+                uname, token = interactive_oauth()
+                return uname, token
+        else:
+            saved_offset = 1 if known_username and known_username not in saved else 0
+            if known_username and idx == 1:
+                # Add and use known_username
+                uname, token = interactive_oauth(known_username)
+                return uname, token
+            if idx <= len(saved) + saved_offset and idx > saved_offset:
+                uname = saved[idx-1-saved_offset]
+                token = get_saved_token(uname)
+                if token:
+                    return uname, token
+                else:
+                    print_error("Token missing or expired for that account. Please re-authorize.")
+                    uname, token = interactive_oauth(uname)
+                    return uname, token
+            elif idx == len(account_options):  # Remove a saved account
+                if not saved:
+                    print_warning("No saved accounts to remove.")
+                    continue
+                remove_idx = menu_boxed(
+                    "Select an account to remove:",
+                    [uname for uname in saved],
+                    helpmsg="Select the account you want to remove from the saved list."
+                )
+                remove_account(saved[remove_idx - 1])
+                print_info("Account removed.")
+                # Rebuild options and re-loop
+                saved = list_saved_accounts()
+                if not saved:
+                    account_options = ["Add a new AniList account"]
+                else:
+                    account_options = []
+                    if known_username and known_username not in saved:
+                        account_options.append(f"Add and use: {known_username} (not yet authorized)")
+                    for uname in saved:
+                        account_options.append(f"Use saved account: {uname}")
+                    account_options.append("Add a different AniList account")
+                    account_options.append("Remove a saved account")
+                continue
+            else:
+                # Add a different account
+                uname, token = interactive_oauth()
+                return uname, token
+
+        print_warning("Please enter a valid number.")
