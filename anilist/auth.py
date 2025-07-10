@@ -155,7 +155,6 @@ def choose_account_flow(known_username=None):
     saved = list_saved_accounts()
     account_options = []
     if known_username and known_username not in saved:
-        # Optionally: offer to add this account as new
         account_options.append(f"Add and use: {known_username} (not yet authorized)")
     for uname in saved:
         account_options.append(f"Use saved account: {uname}")
@@ -163,8 +162,7 @@ def choose_account_flow(known_username=None):
     account_options.append("Remove a saved account")
     idx = menu_boxed(
         "Choose an AniList account for this operation:",
-        account_options,
-        color="CYAN"
+        account_options
     )
     if known_username and idx == 1:
         # Add and use known_username
@@ -186,8 +184,7 @@ def choose_account_flow(known_username=None):
             return choose_account_flow(known_username)
         remove_idx = menu_boxed(
             "Select an account to remove:",
-            saved,
-            color="RED"
+            saved
         )
         remove_account(saved[remove_idx - 1])
         print_info("Account removed.")
