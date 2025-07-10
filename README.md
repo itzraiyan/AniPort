@@ -1,4 +1,6 @@
-# AniPort: AniList Backup & Restore Tool 🌸
+# AniPort: AniList Backup & Restore Tool ⚙️
+
+![AniPort Banner](https://files.catbox.moe/jx8op2.png)
 
 > **Note:** This project contains AI-generated content. While much of the code and documentation is crafted with the help of AI tools, the overall design and intent are shaped by the project owner.
 
