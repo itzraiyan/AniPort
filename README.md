@@ -1,41 +1,71 @@
-# AniPort - AniList Backup & Restore
+# AniPort - AniList Backup & Restore ✨
 
-AniPort is a terminal/CLI tool to **backup and restore your AniList anime and manga lists** — with full support for public/private entries, a colorful anime-themed interface, and smooth cross-platform setup.
-
-> **Note:** This project is partially AI-generated — both the codebase and this documentation were created and refined using AI tools to accelerate development and ensure clarity.
-
----
-
-## Features
-
-- **Export (backup) your AniList anime/manga lists as JSON files**
-  - Supports both public and private entries (OAuth required for private)
-  - Filter by status (e.g., Completed, Watching) or by title substring
-  - Output is a portable JSON file in the `output/` directory
-- **Restore (import) your backup to the same or a different AniList account**
-  - Full restore with OAuth authentication
-  - Handles AniList rate limiting gracefully
-- **Fully terminal/Termux/TTY-friendly**
-  - Anime-style banners, colored boxes, and -help at every prompt
-- **No MAL support — 100% AniList-focused**
-- **Cross-platform:** Works on Android (via Termux), Linux, and Windows
+AniPort is a terminal/CLI tool to **backup and restore your AniList anime and manga lists** — with full support for public/private entries, a colorful anime-themed interface, and smooth cross-platform setup.  
+> **Note:** This project is partially AI-generated 🤖 — both the codebase and documentation were created and refined using AI tools to accelerate development and ensure clarity.
 
 ---
 
-## Installation & Setup
+## 🌸 Project Structure
+
+```
+AniPort/
+├── main.py              # Entry point (banner, menu, workflow routing)
+├── ui/
+│   ├── banners.py       # ASCII art, intro/outro, anime quotes
+│   ├── colors.py        # Color/box helpers
+│   ├── prompts.py       # Decorated/boxed input, menus, progress bar
+│   └── helptext.py      # All help/instructions
+├── anilist/
+│   ├── api.py           # All AniList API queries/mutations
+│   ├── auth.py          # OAuth logic
+│   ├── ratelimit.py     # API rate limit handler
+│   └── formatter.py     # Data filtering/formatting
+├── backup/
+│   ├── exporter.py      # Export workflow (prompt, fetch, save)
+│   ├── importer.py      # Import/restore workflow (prompt, load, restore)
+│   └── output.py        # Output/dir management, file/JSON helpers
+├── output/              # All exported JSONs appear here
+├── requirements.txt     # Python dependencies
+├── LICENSE
+└── README.md
+```
+
+---
+
+## ✨ Features
+
+- **Export (backup) your AniList anime/manga lists as JSON files**  
+  📦 Supports public/private entries (OAuth for private)  
+  🔎 Filter by status (e.g., Completed, Watching) or by title substring  
+  💾 Output is a portable JSON in the `output/` directory
+
+- **Restore (import) your backup to the same or a different AniList account**  
+  🔐 Full restore with OAuth authentication  
+  ⏳ Handles AniList rate limiting gracefully
+
+- **Fully terminal/Termux/TTY-friendly**  
+  🎨 Anime-style banners, colored boxes, and `-help` at every prompt
+
+- **No MAL support — 100% AniList-focused!**
+
+- **Cross-platform:** Works on Android (via Termux), Linux, and Windows 🪟🐧📱
+
+---
+
+## ⚡ Installation & Setup
 
 ### Requirements
 
 - Python 3.7+
 - `pip` (Python package manager)
-- The following Python packages (auto-installed if using `pip install -r requirements.txt`):
+- The following Python packages (auto-installed by `pip install -r requirements.txt`):
   - `requests`
   - `colorama`
   - `tqdm`
 
 ---
 
-### Termux (Android)
+### 📱 Termux (Android)
 
 1. **Install Termux:**  
    [Google Play](https://play.google.com/store/apps/details?id=com.termux) or [F-Droid](https://f-droid.org/packages/com.termux/)
@@ -69,7 +99,7 @@ AniPort is a terminal/CLI tool to **backup and restore your AniList anime and ma
 
 ---
 
-### Linux
+### 🐧 Linux
 
 1. **Open a terminal.**
 
@@ -97,7 +127,7 @@ AniPort is a terminal/CLI tool to **backup and restore your AniList anime and ma
 
 ---
 
-### Windows
+### 🪟 Windows
 
 1. **Install [Git for Windows](https://git-scm.com/download/win)** and [Python 3.x](https://www.python.org/downloads/). Ensure Python is added to your PATH.
 
@@ -121,7 +151,7 @@ AniPort is a terminal/CLI tool to **backup and restore your AniList anime and ma
 
 ---
 
-## Usage
+## 🎮 Usage
 
 Follow the on-screen prompts!  
 Type `-help` at any prompt for extra details or troubleshooting.
@@ -132,18 +162,18 @@ Type `-help` at any prompt for extra details or troubleshooting.
 
 ---
 
-## Contribution
+## 🤝 Contribution
 
 Contributions and feedback are welcome!  
 Feel free to open issues or pull requests to improve AniPort.
 
 ---
 
-## License
+## 📄 License
 
 MIT License  
 See [LICENSE](LICENSE) for details.
 
 ---
 
-*Created by Zilhazz Arefin. Portions of this project and documentation were AI-generated for speed and clarity.*
+*Created by Zilhazz Arefin. Portions of this project and documentation were AI-generated for speed and clarity.* 🌸✨
