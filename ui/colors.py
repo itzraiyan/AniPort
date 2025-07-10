@@ -20,6 +20,9 @@ def boxed_text(text, color="WHITE", width=60):
     lines = []
     for paragraph in text.split('\n'):
         lines.extend(textwrap.wrap(paragraph, width=width) or [''])
+    # Remove trailing blank lines (unless the box is only a blank line)
+    while len(lines) > 1 and lines[-1].strip() == "":
+        lines.pop()
     if not lines:
         lines = ['']
     maxlen = max(len(line) for line in lines)
@@ -36,7 +39,7 @@ def print_success(msg, width=60):
     print(boxed_text(msg, "GREEN", width))
 
 def print_error(msg, width=60):
-    print(boxed_text("Error: " + msg, "RED", width))
+    print(boxed_text(msg, "RED", width))
 
 def print_warning(msg, width=60):
-    print(boxed_text("Warning: " + msg, "YELLOW", width))
+    print(boxed_text(msg, "YELLOW", width))
