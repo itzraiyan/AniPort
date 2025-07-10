@@ -20,7 +20,6 @@ from anilist.api import restore_entry, get_viewer_username
 from ui.helptext import IMPORT_FILE_HELP
 
 def select_backup_file():
-    # (Unchanged from previous version, but remove color= from menu_boxed)
     candidates = []
     if os.path.isdir(OUTPUT_DIR):
         for f in os.listdir(OUTPUT_DIR):
@@ -47,7 +46,7 @@ def select_backup_file():
         )
         options = [f for f in candidates] + ["Other..."]
         while True:
-            idx = menu_boxed(menu_msg, options)  # <-- removed color= here
+            idx = menu_boxed(menu_msg, options)
             if 1 <= idx <= len(candidates):
                 return os.path.join(OUTPUT_DIR, candidates[idx - 1])
             elif idx == len(options):  # Other...
