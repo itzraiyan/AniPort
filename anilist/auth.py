@@ -15,7 +15,7 @@ from ui.helptext import AUTH_CLIENT_ID_HELP, AUTH_CLIENT_SECRET_HELP, AUTH_REDIR
 
 OAUTH_AUTHORIZE_URL = "https://anilist.co/api/v2/oauth/authorize"
 OAUTH_TOKEN_URL = "https://anilist.co/api/v2/oauth/token"
-REDIRECT_URI = "http://localhost"  # Updated to match help prompt
+REDIRECT_URI = "http://localhost"  # Standard for local OAuth flows
 
 def get_client_id():
     return prompt_boxed(
@@ -40,24 +40,9 @@ def build_oauth_url(client_id, redirect_uri=REDIRECT_URI):
     return OAUTH_AUTHORIZE_URL + "?" + urllib.parse.urlencode(params)
 
 def get_auth_code_from_user(auth_url):
-    import sys
-    import webbrowser
-
     print_info("To authenticate, you'll need to open a link, approve access, and copy a code.")
     print_warning("Step 1: Copy the URL below and open it in your browser. Log in and approve access.\n")
     print(auth_url + "\n")  # Plain, copyable, unboxed
-
-    # Offer to open in default system browser (works on most platforms)
-    open_in_browser = prompt_boxed(
-        "Would you like to try opening this link in your system browser automatically? (y/N)",
-        default="N", color="YELLOW"
-    ).strip().lower()
-    if open_in_browser == "y":
-        try:
-            webbrowser.open(auth_url)
-            print_info("Attempted to open the link in your default browser.")
-        except Exception:
-            print_warning("Could not open the browser automatically. Please open the URL above manually.")
 
     print_warning("Step 2: After approving, AniList will redirect (or fail to connect to localhost, that's OK!).")
     print_warning("Copy the full URL from your browser's address bar (it will contain '?code=...'), and paste it below.\n")
