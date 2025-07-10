@@ -1,9 +1,9 @@
 """
 backup/importer.py
 
-Coordinates the restore (import) workflow:
+Coordinates the restore (import) workflow with multi-account support:
+- Lets user select or add AniList accounts (token+username remembered).
 - Looks for JSON backups in output/, helps user select or enter a path.
-- Prompts for account ("same" or "new"), and authentication (OAuth).
 - Reads and validates backup JSON.
 - Restores entries using SaveMediaListEntry (with rate limit handling and progress bar).
 - Shows summary and friendly UI.
@@ -15,22 +15,18 @@ from ui.prompts import (
     confirm_boxed, menu_boxed, print_progress_bar, print_warning
 )
 from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR
-from anilist.auth import interactive_oauth
+from anilist.auth import choose_account_flow
 from anilist.api import restore_entry, get_viewer_username
-from ui.helptext import IMPORT_FILE_HELP, IMPORT_ACCOUNT_HELP
+from ui.helptext import IMPORT_FILE_HELP
 
 def select_backup_file():
-    """
-    Handles selection of backup JSON from output/ or custom path.
-    """
-    # Look for JSON files in output/
+    # (Unchanged from previous version)
     candidates = []
     if os.path.isdir(OUTPUT_DIR):
         for f in os.listdir(OUTPUT_DIR):
             if f.lower().endswith(".json"):
                 candidates.append(f)
     candidates.sort()
-    # Only one JSON file: suggest using it
     if len(candidates) == 1:
         full_path = os.path.join(OUTPUT_DIR, candidates[0])
         prompt_msg = (
@@ -43,7 +39,6 @@ def select_backup_file():
         use_default = prompt_boxed(prompt_msg, default="Y", color="CYAN").strip().lower()
         if use_default in ("", "y", "yes"):
             return full_path
-        # Let user provide custom path below
     elif len(candidates) > 1:
         menu_msg = (
             "Multiple backup files found in 'output/'.\n"
@@ -60,7 +55,6 @@ def select_backup_file():
     else:
         print_warning("No backup JSON files found in 'output/'. You must provide a path.")
 
-    # Manual entry (or user declined above options)
     while True:
         path = prompt_boxed(
             "Enter the full path to your backup JSON file (or drag-and-drop if your terminal supports it):",
@@ -89,13 +83,10 @@ def import_workflow():
         print_error("This backup file is not valid or is from an unsupported format.")
         return
 
-    account_type = menu_boxed(
-        "Are you restoring to the same AniList account, or a new one?",
-        ["Same account", "New account"],
-        helpmsg=IMPORT_ACCOUNT_HELP
-    )
-    print_info("AniList authentication required for restore.")
-    auth_token = interactive_oauth()
+    # Multi-account: Choose import destination
+    print_info("Select which AniList account to restore to.")
+    username, auth_token = choose_account_flow()
+
     viewer = get_viewer_username(auth_token)
     print_info(f"Authenticated as AniList user: {viewer}")
 
@@ -107,7 +98,6 @@ def import_workflow():
         if "manga" in backup_data:
             entries.extend((("MANGA", e) for e in backup_data["manga"]))
     elif isinstance(backup_data, list):
-        # Legacy: assume anime
         entries = [("ANIME", e) for e in backup_data]
     else:
         print_error("Could not understand backup file structure.")
@@ -117,13 +107,11 @@ def import_workflow():
         print_error("No entries found in backup.")
         return
 
-    # Confirm restore
-    print_info(f"Ready to restore {len(entries)} entries. This will add/update your AniList.")
+    print_info(f"Ready to restore {len(entries)} entries to account: {username}. This will add/update your AniList.")
     if not confirm_boxed("Proceed with restore?"):
         print_error("Restore cancelled.")
         return
 
-    # Restore each entry, respecting rate limits
     restored = 0
     failed = 0
     for (media_type, entry) in print_progress_bar(entries, desc="Restoring"):
