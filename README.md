@@ -1,179 +1,214 @@
-# AniPort - AniList Backup & Restore ✨
+# AniPort: AniList Backup & Restore Tool 🌸
 
-AniPort is a terminal/CLI tool to **backup and restore your AniList anime and manga lists** — with full support for public/private entries, a colorful anime-themed interface, and smooth cross-platform setup.  
-> **Note:** This project is partially AI-generated 🤖 — both the codebase and documentation were created and refined using AI tools to accelerate development and ensure clarity.
+> **Note:** This project contains AI-generated content. While much of the code and documentation is crafted with the help of AI tools, the overall design and intent are shaped by the project owner.
 
 ---
 
-## 🌸 Project Structure
+AniPort is a beginner-friendly, interactive Python tool for **backing up and restoring your AniList anime and manga lists**. Whether you want a safe copy of your lists, plan to migrate data, or just love the idea of keeping your collection safe with a sprinkle of anime vibes, AniPort is for you!
+
+---
+
+## ✨ Features
+
+* 🖼️ **Anime-themed terminal interface** with random ASCII art and quotes
+* 🗂️ **Export (backup)** your AniList lists to JSON files (public & private entries)
+* 🔄 **Import (restore)** backups to any AniList account (multi-account support)
+* 🔍 **Smart filtering** — Export by status or title substring
+* 🔒 **Secure:** Uses AniList OAuth for private entries (never asks for your password)
+* 📂 **All local:** Your data is saved in the `output/` folder, and nowhere else
+* 🛡️ **Rate limit protection:** Handles AniList API gently
+* 🐍 **Pure Python** — Works on Android (Termux), Linux, and Windows
+* 🌱 **Zero coding required:** Designed for all skill levels
+
+---
+
+## 📦 Installation
+
+### 🟩 Android (Termux) – **Recommended**
+
+1. **Install Termux:**  
+   Download [Termux from F-Droid](https://f-droid.org/packages/com.termux/) (recommended) or Google Play.
+
+2. **Set up Termux:**
+
+   ```sh
+   pkg update
+   pkg upgrade
+   pkg install python git
+   ```
+
+3. **Get AniPort:**
+
+   ```sh
+   git clone https://github.com/itzraiyan/AniPort.git
+   cd AniPort
+   ```
+
+   *(Or download as ZIP and extract with a file manager.)*
+
+4. **Install Python requirements:**
+
+   ```sh
+   pip install -r requirements.txt
+   ```
+
+5. **You're ready!**
+
+---
+
+### 🟦 Linux (Ubuntu/Debian/Fedora/Arch...)
+
+```sh
+sudo apt update
+sudo apt install python3 python3-pip git
+git clone https://github.com/itzraiyan/AniPort.git
+cd AniPort
+pip3 install -r requirements.txt
+```
+
+---
+
+### 🟨 Windows
+
+1. **Install [Python 3.x](https://www.python.org/downloads/) and [Git](https://git-scm.com/download/win)**  
+   *(During Python install, check "Add Python to PATH")*
+
+2. **Open Command Prompt or PowerShell**
+
+3. **Get AniPort:**
+
+   ```bat
+   git clone https://github.com/itzraiyan/AniPort.git
+   cd AniPort
+   ```
+
+4. **Install dependencies:**
+
+   ```bat
+   pip install -r requirements.txt
+   ```
+
+---
+
+## ▶️ Usage Guide
+
+### 🗃️ Export (Backup) Your AniList
+
+```sh
+python backup/exporter.py
+```
+
+- **On Termux:** `python backup/exporter.py`
+- **On Linux:** `python3 backup/exporter.py`
+- **On Windows:** `python backup/exporter.py`
+
+**What happens next?**
+- Enter your AniList username (type `-help` for help at any prompt).
+- Choose if you want to include private entries (will walk you through AniList OAuth if needed).
+- Choose to export anime, manga, or both.
+- Optionally filter by status (e.g. Completed, Watching) or by title.
+- Your backup JSON will be saved in the `output/` directory!
+
+---
+
+### 🔄 Import (Restore) a Backup
+
+```sh
+python backup/importer.py
+```
+
+- Select a backup JSON from `output/` or specify a path.
+- Authenticate with AniList (OAuth flow, safe and private).
+- Choose which account to restore to.
+- Progress bar will show as entries are restored.
+- Summary is shown at the end.
+
+---
+
+## 📂 Project Structure
 
 ```
 AniPort/
-├── main.py              # Entry point (banner, menu, workflow routing)
-├── ui/
-│   ├── banners.py       # ASCII art, intro/outro, anime quotes
-│   ├── colors.py        # Color/box helpers
-│   ├── prompts.py       # Decorated/boxed input, menus, progress bar
-│   └── helptext.py      # All help/instructions
 ├── anilist/
-│   ├── api.py           # All AniList API queries/mutations
-│   ├── auth.py          # OAuth logic
-│   ├── ratelimit.py     # API rate limit handler
-│   └── formatter.py     # Data filtering/formatting
+│   ├── api.py         # AniList API queries and mutations
+│   ├── auth.py        # OAuth, account management
+│   ├── formatter.py   # Formatting and filtering
+│   ├── ratelimit.py   # Rate limit handling
 ├── backup/
-│   ├── exporter.py      # Export workflow (prompt, fetch, save)
-│   ├── importer.py      # Import/restore workflow (prompt, load, restore)
-│   └── output.py        # Output/dir management, file/JSON helpers
-├── output/              # All exported JSONs appear here
-├── requirements.txt     # Python dependencies
+│   ├── exporter.py    # Backup/export workflow
+│   ├── importer.py    # Restore/import workflow
+│   ├── output.py      # File handling
+├── ui/
+│   ├── banners.py     # ASCII art, quotes, intro/outro
+│   ├── colors.py      # Colorful, boxed text
+│   ├── helptext.py    # All help messages
+│   ├── prompts.py     # All user prompts/menus
+├── output/            # Your backups are stored here!
+├── requirements.txt   # Python dependencies
 ├── LICENSE
 └── README.md
 ```
 
 ---
 
-## ✨ Features
+## 💡 Frequently Asked Questions
 
-- **Export (backup) your AniList anime/manga lists as JSON files**  
-  📦 Supports public/private entries (OAuth for private)  
-  🔎 Filter by status (e.g., Completed, Watching) or by title substring  
-  💾 Output is a portable JSON in the `output/` directory
+**Q: Do I need an AniList account?**  
+A: Yes! Sign up at [anilist.co](https://anilist.co/).
 
-- **Restore (import) your backup to the same or a different AniList account**  
-  🔐 Full restore with OAuth authentication  
-  ⏳ Handles AniList rate limiting gracefully
+**Q: How do I export private entries?**  
+A: Choose "Yes" when prompted—AniPort will walk you through getting AniList API credentials (Client ID/Secret) and OAuth.
 
-- **Fully terminal/Termux/TTY-friendly**  
-  🎨 Anime-style banners, colored boxes, and `-help` at every prompt
+**Q: Where are my backups?**  
+A: In the `output/` folder.
 
-- **No MAL support — 100% AniList-focused!**
+**Q: Can I use this for MAL?**  
+A: No, AniPort is for AniList only.
 
-- **Cross-platform:** Works on Android (via Termux), Linux, and Windows 🪟🐧📱
+**Q: Is this safe?**  
+A: All tokens are stored locally, and AniPort never asks for your AniList password.
 
----
+**Q: I got an error!**  
+A: Read the error message and try again. For help, open an [issue](https://github.com/itzraiyan/AniPort/issues) and include the error.
 
-## ⚡ Installation & Setup
-
-### Requirements
-
-- Python 3.7+
-- `pip` (Python package manager)
-- The following Python packages (auto-installed by `pip install -r requirements.txt`):
-  - `requests`
-  - `colorama`
-  - `tqdm`
+**Q: Is this project AI-generated?**  
+A: Yes, this README and parts of the code are AI-assisted.
 
 ---
 
-### 📱 Termux (Android)
+## 🛡️ Privacy & Security
 
-1. **Install Termux:**  
-   [Google Play](https://play.google.com/store/apps/details?id=com.termux) or [F-Droid](https://f-droid.org/packages/com.termux/)
-
-2. **Update Termux packages:**
-   ```sh
-   pkg update && pkg upgrade
-   ```
-
-3. **Install Python and git:**
-   ```sh
-   pkg install python git
-   ```
-
-4. **Clone the AniPort repository:**
-   ```sh
-   git clone https://github.com/itzraiyan/AniPort.git
-   cd AniPort
-   ```
-
-5. **Install Python dependencies:**
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-6. **Run AniPort:**
-   ```sh
-   python main.py
-   ```
-   > *(Replace `main.py` with your entry point if different.)*
+- OAuth tokens are saved only on your device (`~/.aniport_accounts.json`).
+- No data is sent anywhere except AniList API.
+- You can delete tokens and data at any time.
 
 ---
 
-### 🐧 Linux
+## 🤝 Contributing
 
-1. **Open a terminal.**
-
-2. **Install Python and git (Debian/Ubuntu example):**
-   ```sh
-   sudo apt update
-   sudo apt install python3 python3-pip git
-   ```
-
-3. **Clone the AniPort repository:**
-   ```sh
-   git clone https://github.com/itzraiyan/AniPort.git
-   cd AniPort
-   ```
-
-4. **Install Python dependencies:**
-   ```sh
-   pip3 install -r requirements.txt
-   ```
-
-5. **Run AniPort:**
-   ```sh
-   python3 main.py
-   ```
+- Issues and pull requests are welcome!
+- Please be kind and constructive—everyone starts somewhere.
 
 ---
 
-### 🪟 Windows
+## 📜 License
 
-1. **Install [Git for Windows](https://git-scm.com/download/win)** and [Python 3.x](https://www.python.org/downloads/). Ensure Python is added to your PATH.
-
-2. **Open Command Prompt or PowerShell.**
-
-3. **Clone the AniPort repository:**
-   ```sh
-   git clone https://github.com/itzraiyan/AniPort.git
-   cd AniPort
-   ```
-
-4. **Install Python dependencies:**
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-5. **Run AniPort:**
-   ```sh
-   python main.py
-   ```
+AniPort is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 🎮 Usage
+## 🌸 Credits & Acknowledgments
 
-Follow the on-screen prompts!  
-Type `-help` at any prompt for extra details or troubleshooting.
-
-- **Export:** Backup your anime/manga lists (JSON saved to `output/`)
-- **Import:** Restore a backup to any AniList account (OAuth required)
-- **All features are accessible via the main menu**
+- Created by [Zilhazz Arefin](https://github.com/itzraiyan)
+- ASCII art and anime quotes bring a bit of joy to your terminal!
 
 ---
 
-## 🤝 Contribution
+## 🛑 Disclaimer
 
-Contributions and feedback are welcome!  
-Feel free to open issues or pull requests to improve AniPort.
-
----
-
-## 📄 License
-
-MIT License  
-See [LICENSE](LICENSE) for details.
+> **This project contains AI-generated content. Use at your own risk, and always review code before running.**
 
 ---
 
-*Created by Zilhazz Arefin. Portions of this project and documentation were AI-generated for speed and clarity.* 🌸✨
+**Enjoy AniPort—and may your anime adventures live on forever!**  
+*“No matter how deep the night, it always turns to day, eventually.”* – Brook
