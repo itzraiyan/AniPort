@@ -23,22 +23,26 @@ MAIN_MENU_HELP = (
     "Type -help at any prompt for context-sensitive help."
 )
 
-# ----- ADDED BELOW -----
 AUTH_CLIENT_ID_HELP = (
-    "Your AniList Client ID is required for private list export or restore.\n"
-    "Find it at: https://anilist.co/settings/developer\n"
-    "Click 'Create New Client' if you haven't made one before. After creation, copy the Client ID from the table."
+    "To get your AniList Client ID:\n"
+    "1. Go to: https://anilist.co/settings/developer\n"
+    "2. Click 'Create New Client'.\n"
+    "3. For the name, enter: AniPort\n"
+    "4. For the Redirect URL, enter: http://localhost\n"
+    "5. Click 'Create'.\n"
+    "6. After creating, copy the Client ID shown in the table.\n"
+    "Paste that value here."
 )
 
 AUTH_CLIENT_SECRET_HELP = (
-    "Your AniList Client Secret is shown next to your Client ID in the AniList developer settings.\n"
-    "This is needed to complete the OAuth authentication for private access."
+    "After creating your AniPort client on AniList (see previous help),\n"
+    "copy the Client Secret shown in the developer table and paste it here."
 )
 
 AUTH_REDIRECT_URL_HELP = (
-    "After you approve access in your browser, AniList will redirect you to a URL.\n"
-    "Copy and paste the entire URL (starting with https://...) here.\n"
-    "The code needed for authentication will be extracted automatically."
+    "After you approve access in your browser, AniList will redirect you to a page (it may fail to open on localhost, that's OK!).\n"
+    "Just copy the full URL from your browser's address bar (it will contain ?code=...), and paste it here.\n"
+    "The tool will extract the code automatically."
 )
 
 USERNAME_HELP = (
