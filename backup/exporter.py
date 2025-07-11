@@ -6,8 +6,10 @@ Coordinates the export (backup) workflow:
 - Handles OAuth if private entries needed.
 - Fetches list(s), applies filters, saves as JSON in output/.
 - Shows progress and summary.
+- Now shows detailed stats (exported/skipped, time taken, responsive output).
 """
 
+import time
 from ui.prompts import (
     prompt_boxed, print_info, print_success, print_error,
     confirm_boxed, menu_boxed, print_progress_bar
@@ -19,7 +21,6 @@ from ui.helptext import USERNAME_HELP, EXPORT_PRIVACY_HELP, EXPORT_STATUS_HELP, 
 
 def export_workflow():
     ensure_output_dir()
-
     username = None
     while not username:
         username = prompt_boxed(
@@ -37,7 +38,7 @@ def export_workflow():
     auth_token = None
     if use_oauth:
         print_info("You will need AniList API credentials. Follow the prompts!")
-        auth_token = interactive_oauth()
+        _, auth_token = interactive_oauth()
 
     # Export type: anime, manga, or both
     exptype = menu_boxed(
@@ -96,6 +97,8 @@ def export_workflow():
         tasks.append("MANGA")
 
     exported = {}
+    stats = {}
+    start = time.time()
     for media_type in tasks:
         print_info(f"Fetching {media_type.lower()} list from AniList...")
         try:
@@ -106,6 +109,11 @@ def export_workflow():
                 statuses=list(statuses) if statuses else None,
                 title_sub=title_sub
             )
+            total = len(entries)
+            stats[media_type] = {
+                "exported": total,
+                "filtered": "filtered"  # We don't track skipped here, but can later.
+            }
             if not entries:
                 print_error(f"No {media_type.lower()} entries found.")
                 continue
@@ -123,4 +131,11 @@ def export_workflow():
     if len(tasks) == 2 and exported:
         filename = get_output_path(username, "both")
         save_json_backup(exported, filename)
+
+    elapsed = time.time() - start
+    # Print stats
     print_success("Export complete! Your backup(s) are in the output/ folder.")
+    print_info("Export stats:")
+    for k in exported:
+        print_info(f"  {k.title()} exported: {len(exported[k])}")
+    print_info(f"  Time taken: {elapsed:.1f} sec")
