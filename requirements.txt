@@ -1,3 +1,4 @@
 requests>=2.25
 colorama>=0.4
 tqdm>=4.60
+rich>=13.0
