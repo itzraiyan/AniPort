@@ -19,20 +19,32 @@ from ui.helptext import AUTH_CLIENT_ID_HELP, AUTH_CLIENT_SECRET_HELP, AUTH_REDIR
 OAUTH_AUTHORIZE_URL = "https://anilist.co/api/v2/oauth/authorize"
 OAUTH_TOKEN_URL = "https://anilist.co/api/v2/oauth/token"
 REDIRECT_URI = "http://localhost"
-ACCOUNTS_PATH = os.path.expanduser("~/.aniport_accounts.json")
+
+def _get_accounts_path():
+    # Save in ~/AniPort/.aniport_accounts.json
+    home = os.path.expanduser("~")
+    aniport_dir = os.path.join(home, "AniPort")
+    if not os.path.exists(aniport_dir):
+        try:
+            os.makedirs(aniport_dir, exist_ok=True)
+        except Exception:
+            pass
+    return os.path.join(aniport_dir, ".aniport_accounts.json")
 
 def _load_accounts():
-    if os.path.isfile(ACCOUNTS_PATH):
+    path = _get_accounts_path()
+    if os.path.isfile(path):
         try:
-            with open(ACCOUNTS_PATH, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
     return {}
 
 def _save_accounts(accounts):
+    path = _get_accounts_path()
     try:
-        with open(ACCOUNTS_PATH, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(accounts, f, indent=2)
     except Exception as e:
         print_error(f"Failed to save accounts: {e}")
