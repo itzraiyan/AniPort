@@ -7,14 +7,17 @@ Coordinates the restore (import) workflow with multi-account support:
 - Reads and validates backup JSON.
 - Restores entries using SaveMediaListEntry (with rate limit handling and progress bar).
 - Shows summary and friendly UI.
+- Writes failed entries to a separate failed restore file if any.
+- Shows detailed stats (total, restored, failed, time taken).
 """
 
 import os
+import time
 from ui.prompts import (
     prompt_boxed, print_info, print_success, print_error,
     confirm_boxed, menu_boxed, print_progress_bar, print_warning
 )
-from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR
+from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup
 from anilist.auth import choose_account_flow
 from anilist.api import restore_entry, get_viewer_username
 from ui.helptext import IMPORT_FILE_HELP
@@ -67,6 +70,16 @@ def select_backup_file():
         if path:
             return path
 
+def get_failed_restore_path(orig_path):
+    """
+    Given the original backup path, return a suitable failed import path.
+    E.g., output/YourName_anime_backup.failed.json
+    """
+    dirname, filename = os.path.split(orig_path)
+    base, ext = os.path.splitext(filename)
+    failed_name = f"{base}.failed{ext}"
+    return os.path.join(dirname or ".", failed_name)
+
 def import_workflow():
     print_info("Let's restore your AniList from a backup JSON!")
 
@@ -113,15 +126,39 @@ def import_workflow():
 
     restored = 0
     failed = 0
+    failed_entries = []
+    start = time.time()
+
     for (media_type, entry) in print_progress_bar(entries, desc="Restoring"):
         ok = restore_entry(entry, media_type, auth_token)
         if ok:
             restored += 1
         else:
             failed += 1
+            failed_entries.append({"media_type": media_type, "entry": entry})
 
-    print_success(f"Restore complete! {restored} entries restored. {failed} failed.")
+    end = time.time()
+    elapsed = end - start
+
+    print_success(f"Restore complete!")
+    print_info(f"Stats:\n  Total: {len(entries)}\n  Restored: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec")
+
     if failed:
-        print_error("Some entries could not be restored. Please check your backup and try again.")
+        print_error("Some entries could not be restored.")
+        failed_path = get_failed_restore_path(filepath)
+        # Structure: same as input if possible (for easy re-import)
+        if isinstance(backup_data, dict) and ("anime" in backup_data or "manga" in backup_data):
+            failed_dict = {"anime": [], "manga": []}
+            for item in failed_entries:
+                mt = item["media_type"].lower()
+                if mt in failed_dict:
+                    failed_dict[mt].append(item["entry"])
+            save_json_backup(failed_dict, failed_path)
+        else:
+            # Flat list
+            failed_list = [item["entry"] for item in failed_entries]
+            save_json_backup(failed_list, failed_path)
+        print_error(f"Failed entries saved to: {failed_path}")
+        print_info("You can retry importing this file later.")
     else:
         print_info("Your AniList should now match your backup!")
