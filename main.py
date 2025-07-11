@@ -71,5 +71,17 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print_error("\nInterrupted. Goodbye! 🐾")
+        # Improved boxed message for Ctrl+C
+        from ui.colors import boxed_text
+        msg = boxed_text("Interrupted by user. Goodbye! 🐾", "RED", 60)
+        print(msg)
         sys.exit(0)
+    except Exception as e:
+        # Rich traceback for any other errors
+        try:
+            from rich.console import Console
+            from rich.traceback import Traceback
+            Console().print(Traceback())
+        except ImportError:
+            print_error(f"Unexpected error: {e}")
+        sys.exit(1)
