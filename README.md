@@ -6,7 +6,7 @@
 
 ---
 
-AniPort is a beginner-friendly, interactive Python tool for **backing up and restoring your AniList anime and manga lists**. Whether you want a safe copy of your lists, plan to migrate data, or just love the idea of keeping your collection safe with a sprinkle of anime vibes, AniPort is for you!
+AniPort is a beginner-friendly, interactive Python tool for **backing up and restoring your AniList anime and manga lists**. Whether you want a safe copy of your lists, plan to migrate data, or just love colorful terminals – AniPort is for you!
 
 ---
 
@@ -24,7 +24,7 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 
 ---
 
-## 📦 Installation
+## 📦 Installation & Quickstart
 
 ### 🟩 Android (Termux) – **Recommended**
 
@@ -54,7 +54,11 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
    pip install -r requirements.txt
    ```
 
-5. **You're ready!**
+5. **Run AniPort:**
+
+   ```sh
+   python main.py
+   ```
 
 ---
 
@@ -66,6 +70,7 @@ sudo apt install python3 python3-pip git
 git clone https://github.com/itzraiyan/AniPort.git
 cd AniPort
 pip3 install -r requirements.txt
+python3 main.py
 ```
 
 ---
@@ -90,40 +95,115 @@ pip3 install -r requirements.txt
    pip install -r requirements.txt
    ```
 
+5. **Run AniPort:**
+
+   ```bat
+   python main.py
+   ```
+
 ---
 
 ## ▶️ Usage Guide
 
-### 🗃️ Export (Backup) Your AniList
+Start AniPort with:
 
 ```sh
-python backup/exporter.py
+python main.py
 ```
 
-- **On Termux:** `python backup/exporter.py`
-- **On Linux:** `python3 backup/exporter.py`
-- **On Windows:** `python backup/exporter.py`
+You'll see an anime-themed main menu. Here's what happens next:
 
-**What happens next?**
-- Enter your AniList username (type `-help` for help at any prompt).
-- Choose if you want to include private entries (will walk you through AniList OAuth if needed).
-- Choose to export anime, manga, or both.
-- Optionally filter by status (e.g. Completed, Watching) or by title.
-- Your backup JSON will be saved in the `output/` directory!
+---
+
+### 🗃️ Export (Backup) Your AniList
+
+1. **Choose "Export your AniList (create a backup)" from the menu.**
+2. **Enter your AniList username.**
+   - Type `-help` at any prompt for a helpful explanation!
+3. **Choose if you want private entries included.**
+   - **If you select "Yes" (private + public):**
+     - You'll be guided through the AniList OAuth authentication flow.
+     - **You'll need your AniList API Client ID and Client Secret.**
+       - If you don't have these, follow the detailed instructions shown in the prompt and help message:
+         - Go to [AniList Developer Settings](https://anilist.co/settings/developer)
+         - Create a new client: Name="AniPort", Redirect URL="http://localhost"
+         - Copy your Client ID and Client Secret.
+       - Paste these into the tool when prompted.
+     - You'll be given an authorization URL. **Open it in your browser, log in, and approve access.**
+     - **After approving, copy the full URL from your browser's address bar** and paste it back into the tool.
+     - The tool will extract the code and finish authentication for you.
+     - Your OAuth token is securely saved locally for future use.
+4. **Choose export type:** Anime, Manga, or Both.
+5. **Apply filters (optional):** Filter by status (e.g., Completed, Watching) or by title substring.
+6. **Your backup(s) will be saved in the `output/` folder.**
+7. **Stats and summary will appear at the end.**
 
 ---
 
 ### 🔄 Import (Restore) a Backup
 
-```sh
-python backup/importer.py
+1. **Choose "Import from a backup (restore your list)" from the menu.**
+2. **Select a backup JSON file.**
+   - If there are backups in `output/`, you'll be shown a menu to select one.
+   - Or, enter the path to your backup file.
+3. **Authenticate and choose the AniList account to restore to.**
+   - AniPort supports multiple accounts! You'll see a menu:
+     - Use a saved account (if you authenticated before)
+     - Add a new AniList account (go through OAuth again, same as above)
+     - Remove a saved account
+   - If you are restoring private entries or using a new account, you’ll go through the OAuth flow just like in Export.
+4. **Confirm restore – AniPort will show a summary before proceeding.**
+5. **Progress bar will show as entries are restored.**
+6. **Stats and summary will appear at the end.**
+   - If any entries fail to restore, a `.failed.json` backup is created for retrying later.
+
+---
+
+### ⚠️ AniList Authentication: What to Expect
+
+- **You do NOT need to give your AniList password to this tool.**  
+- Private entries require OAuth authentication.
+- You must create an AniList API client (one-time, free, easy).
+- Follow the prompts – type `-help` if you are stuck.
+- OAuth tokens are stored locally in `.aniport_accounts.json` and can be deleted at any time.
+
+---
+
+### Example Session (Export)
+
+```
+Welcome to your AniList Backup & Restore Tool!
+[Anime banner and quote]
+Choose an option:
+  1. Export your AniList (create a backup)
+  2. Import from a backup (restore your list)
+  3. Learn more about this tool
+  4. Exit
+> 1
+
+Enter your AniList username (type '-help' for help)
+> MyAnimeName
+
+Does your AniList list include private entries?
+  1. No (public only)
+  2. Yes (private + public)
+> 2
+
+[Prompts for Client ID and Secret, shows OAuth URL, asks to paste redirect URL]
+...
 ```
 
-- Select a backup JSON from `output/` or specify a path.
-- Authenticate with AniList (OAuth flow, safe and private).
-- Choose which account to restore to.
-- Progress bar will show as entries are restored.
-- Summary is shown at the end.
+---
+
+### Tips
+
+- **Type `-help` at any prompt for context-sensitive help.**
+- **OAuth tokens are saved only on your device.** Safe, secure, and private.
+- If you ever need to manage saved accounts, use the "Import" flow for account management.
+
+---
+
+**If you get stuck, read the prompt explanations, and check the [FAQ](#💡-frequently-asked-questions) for troubleshooting!**
 
 ---
 
@@ -137,8 +217,8 @@ AniPort/
 │   ├── formatter.py   # Formatting and filtering
 │   ├── ratelimit.py   # Rate limit handling
 ├── backup/
-│   ├── exporter.py    # Backup/export workflow
-│   ├── importer.py    # Restore/import workflow
+│   ├── exporter.py    # Backup/export workflow (called by main.py)
+│   ├── importer.py    # Restore/import workflow (called by main.py)
 │   ├── output.py      # File handling
 ├── ui/
 │   ├── banners.py     # ASCII art, quotes, intro/outro
@@ -146,6 +226,7 @@ AniPort/
 │   ├── helptext.py    # All help messages
 │   ├── prompts.py     # All user prompts/menus
 ├── output/            # Your backups are stored here!
+├── main.py            # Entry point – always start here!
 ├── requirements.txt   # Python dependencies
 ├── LICENSE
 └── README.md
