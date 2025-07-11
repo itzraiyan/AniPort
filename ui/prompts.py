@@ -33,6 +33,7 @@ def menu_boxed(title, options, helpmsg=None, width=60):
         print_warning("Please enter a valid number.")
 
 def confirm_boxed(msg, color="YELLOW", width=60):
+    # Only show (y/N) once!
     print(boxed_text(msg + " (y/N)", color, width))
     ans = input("> ").strip().lower()
     return ans == 'y'
