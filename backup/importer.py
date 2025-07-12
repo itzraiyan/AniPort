@@ -133,9 +133,6 @@ def verify_restored_entries(entries, auth_token):
         current_ids = set(e["media"]["id"] for e in current_entries)
         total = len(type_map[media_type])
         present = sum(1 for e in type_map[media_type] if e["media"]["id"] in current_ids)
-        # Debug info (optional)
-        # print_info(f"Backup IDs ({media_type}): {[e['media']['id'] for e in type_map[media_type]]}")
-        # print_info(f"AniList IDs ({media_type}): {list(current_ids)}")
         result[media_type] = (present, total)
     return result
 
@@ -169,6 +166,13 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
         save_json_backup(failed_list, failed_path)
     print_error(f"Failed entries saved to: {failed_path}")
     print_info("You can retry importing this file later.")
+
+def countdown_timer(seconds=20):
+    print_info(f"Waiting {seconds} seconds before verifying your restored AniList.")
+    for i in range(seconds, 0, -1):
+        print(f"Countdown: {i}...", end="\r", flush=True)
+        time.sleep(1)
+    print(" " * 30, end="\r")  # Clear line after countdown
 
 def import_workflow():
     print_info("Let's restore your AniList from a backup JSON!")
@@ -223,10 +227,9 @@ def import_workflow():
     print_success(f"Restore complete!")
     print_info(f"Stats:\n  Total: {len(entries)}\n  Restored: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec")
 
-    # Verification step
+    # Verification step with countdown
+    countdown_timer(20)
     print_info("Verifying restored entries in AniList...")
-    # Wait a bit for AniList API to reflect changes
-    time.sleep(2)
     verify_result = verify_restored_entries(entries, auth_token)
     for mt in sorted(verify_result):
         present, total = verify_result[mt]
@@ -251,11 +254,11 @@ def import_workflow():
                 r_restored, r_failed, r_failed_entries, r_elapsed = import_entries(retry_entries, auth_token)
                 print_success("Retry restore complete!")
                 print_info(f"Stats:\n  Total retried: {len(retry_entries)}\n  Restored: {r_restored}\n  Failed: {r_failed}\n  Time: {r_elapsed:.1f} sec")
-                # Verification after retry
+                # Verification after retry with countdown
+                countdown_timer(20)
                 print_info("Verifying entries after retry...")
                 # Merge entries for verification (all that should be present now)
                 all_entries = entries + retry_entries
-                time.sleep(2)
                 verify_result = verify_restored_entries(all_entries, auth_token)
                 for mt in sorted(verify_result):
                     present, total = verify_result[mt]
