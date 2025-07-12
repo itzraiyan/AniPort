@@ -82,7 +82,7 @@ def fetch_list(
                     progressVolumes
                     notes
                     private
-                    customList
+                    customLists
                     startedAt { year month day }
                     completedAt { year month day }
                     media {
@@ -108,21 +108,15 @@ def fetch_list(
         if resp.status_code == 200:
             data = resp.json()
             lists = data["data"]["MediaListCollection"]["lists"]
-            # entries: flatten all entries (including customList if present)
             entries = [entry for lst in lists for entry in lst["entries"]]
-            # Filter entries if needed
             filtered = filter_entries(entries, statuses, title_sub)
             return filtered
         else:
-            # Handle rate limit or other errors
             handled = handle_rate_limit(resp)
             if not handled:
                 raise Exception(f"Failed to fetch {media_type} list: HTTP {resp.status_code} {resp.text}")
 
 def get_custom_lists(auth_token, media_type):
-    """
-    Returns a set of existing custom list names for the user (for anime or manga).
-    """
     query = '''
     query ($type: MediaType) {
         Viewer {
@@ -143,15 +137,10 @@ def get_custom_lists(auth_token, media_type):
     return set()
 
 def create_custom_list(auth_token, media_type, list_name):
-    """
-    Adds a custom list (by name) to the user's list options. Only adds if not present.
-    """
-    # First, fetch existing custom lists
     existing = get_custom_lists(auth_token, media_type)
     if list_name in existing:
-        return True  # Already exists
+        return True
 
-    # Prepare the new customLists array
     new_custom_lists = list(existing) + [list_name]
     mutation = '''
     mutation ($customLists: [String]) {
@@ -178,13 +167,10 @@ def restore_entry(
     auth_token,
     auto_create_custom_lists=True
 ):
-    """
-    Restores a single entry using SaveMediaListEntry mutation.
-    If entry has a customList and it doesn't exist, creates it first if auto_create_custom_lists is True.
-    Returns: True if success, False otherwise.
-    """
-    # If needed, create custom list before restore
-    custom_list = entry.get("customList")
+    # New: handle multiple custom lists (AniList API only allows one per mutation)
+    custom_lists = entry.get("customLists", []) or []
+    # Use first custom list if present
+    custom_list = custom_lists[0] if custom_lists else None
     if custom_list and auto_create_custom_lists:
         create_custom_list(auth_token, media_type, custom_list)
 
@@ -207,7 +193,6 @@ def restore_entry(
       }
     }
     '''
-    # Prepare variables from entry
     variables = {
         "mediaId": entry["media"]["id"],
         "status": entry.get("status"),
@@ -218,10 +203,8 @@ def restore_entry(
         "private": entry.get("private"),
         "startedAt": entry.get("startedAt"),
         "completedAt": entry.get("completedAt"),
-        # Only include customList if present (None is fine)
         "customList": custom_list,
     }
-    # Remove nulls (AniList API doesn't like nulls)
     variables = {k: v for k, v in variables.items() if v is not None}
     headers = {
         "Authorization": f"Bearer {auth_token}"
@@ -229,19 +212,13 @@ def restore_entry(
     while True:
         resp = requests.post(ANILIST_API, json={"query": mutation, "variables": variables}, headers=headers)
         if resp.status_code == 200:
-            # Success!
             return True
         else:
-            # Handle rate limit or other errors
             handled = handle_rate_limit(resp)
             if not handled:
-                # Other errors: skip or raise
                 return False
 
 def test_token(token):
-    """
-    Verifies if an AniList OAuth token is valid.
-    """
     query = '''
     query { Viewer { id name } }
     '''
