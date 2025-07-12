@@ -150,7 +150,9 @@ def import_entries(entries, auth_token):
     failed = 0
     failed_entries = []
     start = time.time()
-    for (media_type, entry) in print_progress_bar(entries, desc="Restoring"):
+    # Use tqdm.write for in-progress info to avoid breaking progress bar
+    from tqdm import tqdm
+    for (media_type, entry) in tqdm(entries, desc="Restoring", unit="item"):
         ok = restore_entry(entry, media_type, auth_token)
         if ok:
             restored += 1
@@ -288,7 +290,7 @@ def import_workflow():
         print_error("Some entries could not be restored.")
         save_failed_entries(failed_entries, backup_data, failed_path)
         # Offer retry
-        if confirm_boxed("Retry failed/missing entries? (y/N)"):
+        if confirm_boxed("Retry failed/missing entries?"):
             # Load failed backup
             failed_data = load_json_backup(failed_path)
             retry_entries = get_entries_from_backup(failed_data)
