@@ -10,8 +10,8 @@ Coordinates the restore (import) workflow with multi-account support:
 - Writes failed entries to a separate failed restore file if any.
 - Shows detailed stats (total, restored, failed, time taken).
 - Robust verification and account checking using token.
-- Improved countdown: updates inside a single box, not spamming lines.
 - Explicit verification: checks that each imported entry is present in the user's AniList, regardless of total list size.
+- Automatically creates missing custom lists as needed for imported entries.
 """
 
 import os
@@ -24,7 +24,7 @@ from ui.prompts import (
 from ui.colors import boxed_text
 from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup
 from anilist.auth import choose_account_flow
-from anilist.api import restore_entry, get_viewer_info, fetch_list
+from anilist.api import restore_entry, get_viewer_info, fetch_list, get_custom_lists, create_custom_list
 from ui.helptext import IMPORT_FILE_HELP
 
 def select_backup_file():
@@ -150,10 +150,25 @@ def import_entries(entries, auth_token):
     failed = 0
     failed_entries = []
     start = time.time()
+
+    # Pre-scan for missing custom lists and create them before import
+    type_to_custom_lists = {"ANIME": set(), "MANGA": set()}
+    for (media_type, entry) in entries:
+        cl = entry.get("customList")
+        if cl:
+            type_to_custom_lists[media_type].add(cl)
+    for media_type in ("ANIME", "MANGA"):
+        if type_to_custom_lists[media_type]:
+            existing = get_custom_lists(auth_token, media_type)
+            missing = type_to_custom_lists[media_type] - existing
+            for name in missing:
+                print_info(f"Creating custom list '{name}' for {media_type} (if not already present)...")
+                create_custom_list(auth_token, media_type, name)
+
     # Use tqdm.write for in-progress info to avoid breaking progress bar
     from tqdm import tqdm
     for (media_type, entry) in tqdm(entries, desc="Restoring", unit="item"):
-        ok = restore_entry(entry, media_type, auth_token)
+        ok = restore_entry(entry, media_type, auth_token, auto_create_custom_lists=False)
         if ok:
             restored += 1
         else:
@@ -255,7 +270,7 @@ def import_workflow():
         print_error("Restore cancelled.")
         return
 
-    # Restore loop
+    # Restore loop (with pre-creation of custom lists as needed)
     restored, failed, failed_entries, elapsed = import_entries(entries, auth_token)
 
     print_success(f"Restore complete!")
