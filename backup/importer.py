@@ -155,16 +155,36 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
     print_error(f"Failed entries saved to: {failed_path}")
     print_info("You can retry importing this file later.")
 
-def countdown_timer(seconds=20):
-    box_height = 5
-    for i in range(seconds, 0, -1):
-        msg = f"Please wait while AniList updates...\nCountdown: {i} seconds"
-        print_boxed_safe(msg, "YELLOW", 60)
-        sys.stdout.write(f"\033[F" * box_height)
-        sys.stdout.flush()
-        time.sleep(1)
-    msg = "Proceeding to verification..."
-    print_boxed_safe(msg, "YELLOW", 60)
+def spinner_progress_bar(task_message="Verifying restored entries in AniList...", seconds=7):
+    import itertools
+    import threading
+
+    spinner = itertools.cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+    total = seconds
+    progress = [0]
+    done = [False]
+
+    def spin():
+        while not done[0]:
+            bar_len = 30
+            percent = progress[0] / total
+            filled_len = int(bar_len * percent)
+            bar = "█" * filled_len + "-" * (bar_len - filled_len)
+            sys.stdout.write(
+                f"\r{task_message} {next(spinner)} [{bar}] {int(percent*100)}%"
+            )
+            sys.stdout.flush()
+            time.sleep(0.14)
+        sys.stdout.write("\r" + " " * (len(task_message) + 45) + "\r")
+
+    t = threading.Thread(target=spin)
+    t.start()
+    for i in range(total * 7):  # speed up, so it's not too slow
+        time.sleep(0.14)
+        progress[0] = min(total, (i + 1) / 7)
+    done[0] = True
+    t.join()
+    print_boxed_safe("Verification complete!", "CYAN", 60)
 
 def print_post_verification_note():
     link = "https://anilist.co/settings/list"
@@ -231,9 +251,9 @@ def import_workflow():
     print_boxed_safe(f"Restore complete!", "GREEN", 60)
     print_boxed_safe(f"Stats:\n  Total: {len(entries)}\n  Restored: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec", "CYAN", 60)
 
-    countdown_timer(20)
-    print_boxed_safe("Verifying restored entries in AniList...", "CYAN", 60)
+    spinner_progress_bar()
 
+    print_boxed_safe("Verifying restored entries in AniList...", "CYAN", 60)
     verify_result = verify_restored_entries(entries, auth_token)
 
     all_verified = True
@@ -269,7 +289,7 @@ def import_workflow():
                 r_restored, r_failed, r_failed_entries, r_elapsed = import_entries(retry_entries, auth_token)
                 print_boxed_safe("Retry restore complete!", "GREEN", 60)
                 print_boxed_safe(f"Stats:\n  Total retried: {len(retry_entries)}\n  Restored: {r_restored}\n  Failed: {r_failed}\n  Time: {r_elapsed:.1f} sec", "CYAN", 60)
-                countdown_timer(20)
+                spinner_progress_bar()
                 print_boxed_safe("Verifying entries after retry...", "CYAN", 60)
 
                 all_entries = entries + retry_entries
