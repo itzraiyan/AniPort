@@ -10,14 +10,18 @@ Coordinates the restore (import) workflow with multi-account support:
 - Writes failed entries to a separate failed restore file if any.
 - Shows detailed stats (total, restored, failed, time taken).
 - Robust verification and account checking using token.
+- Improved countdown: updates inside a single box, not spamming lines.
+- Explicit verification: checks that each imported entry is present in the user's AniList, regardless of total list size.
 """
 
 import os
 import time
+import sys
 from ui.prompts import (
     prompt_boxed, print_info, print_success, print_error,
     confirm_boxed, menu_boxed, print_progress_bar, print_warning
 )
+from ui.colors import boxed_text
 from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup
 from anilist.auth import choose_account_flow
 from anilist.api import restore_entry, get_viewer_info, fetch_list
@@ -113,8 +117,9 @@ def get_entry_types_in_backup(backup_data):
 
 def verify_restored_entries(entries, auth_token):
     """
-    Verifies how many entries (by media.id and type) are present in the AniList of the authenticated user.
-    Only checks the types present in the backup!
+    Explicit verification: For each imported entry, check if its media ID is present in the user's AniList after import.
+    - Fetch the full list for each relevant media type (anime, manga).
+    - For each imported entry, check if its media ID is present in the fetched list.
     Returns: dict: { "ANIME": (present, total), "MANGA": (present, total) }
     """
     result = {}
@@ -127,12 +132,16 @@ def verify_restored_entries(entries, auth_token):
     for (media_type, entry) in entries:
         type_map[media_type].append(entry)
     for media_type in ["ANIME", "MANGA"]:
-        if not type_map[media_type]:
+        imported_entries = type_map[media_type]
+        if not imported_entries:
             continue
+        # Fetch all user entries of this type (could be many, e.g. 100+)
         current_entries = fetch_list(user_id, media_type, auth_token=auth_token)
         current_ids = set(e["media"]["id"] for e in current_entries)
-        total = len(type_map[media_type])
-        present = sum(1 for e in type_map[media_type] if e["media"]["id"] in current_ids)
+        imported_ids = set(e["media"]["id"] for e in imported_entries)
+        # For each imported entry, check if its ID is present
+        present = sum(1 for eid in imported_ids if eid in current_ids)
+        total = len(imported_ids)
         result[media_type] = (present, total)
     return result
 
@@ -168,11 +177,18 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
     print_info("You can retry importing this file later.")
 
 def countdown_timer(seconds=20):
-    print_info(f"Waiting {seconds} seconds before verifying your restored AniList.")
+    # Improved: Only one box, updates in place. Uses ANSI escape to move cursor up.
+    box_height = 5  # Estimate: top+bottom+2 lines of msg
     for i in range(seconds, 0, -1):
-        print(f"Countdown: {i}...", end="\r", flush=True)
+        msg = f"Please wait while AniList updates...\nCountdown: {i} seconds"
+        print(boxed_text(msg, "YELLOW", 60))
+        # Move cursor up by box height to overwrite on next print
+        sys.stdout.write(f"\033[F" * box_height)
+        sys.stdout.flush()
         time.sleep(1)
-    print(" " * 30, end="\r")  # Clear line after countdown
+    # Print final box
+    msg = "Proceeding to verification..."
+    print(boxed_text(msg, "YELLOW", 60))
 
 def import_workflow():
     print_info("Let's restore your AniList from a backup JSON!")
@@ -227,15 +243,25 @@ def import_workflow():
     print_success(f"Restore complete!")
     print_info(f"Stats:\n  Total: {len(entries)}\n  Restored: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec")
 
-    # Verification step with countdown
+    # Verification step with improved countdown
     countdown_timer(20)
     print_info("Verifying restored entries in AniList...")
+
     verify_result = verify_restored_entries(entries, auth_token)
+
+    all_verified = True
     for mt in sorted(verify_result):
         present, total = verify_result[mt]
-        print_info(f"Verification: {present} / {total} entries present in AniList ({mt}).")
-        if total-present > 0:
+        print_info(f"Verification: {present} / {total} imported entries present in AniList ({mt}).")
+        if present != total:
             print_info(f"{total-present} entries are still missing after restore.")
+            all_verified = False
+
+    # Final verification summary
+    if all_verified:
+        print_success("Verification PASSED: All imported entries are present in your AniList!")
+    else:
+        print_error("Verification FAILED: Some imported entries are missing from your AniList.")
 
     # Handle failed entries
     failed_path = get_failed_restore_path(filepath)
@@ -254,18 +280,23 @@ def import_workflow():
                 r_restored, r_failed, r_failed_entries, r_elapsed = import_entries(retry_entries, auth_token)
                 print_success("Retry restore complete!")
                 print_info(f"Stats:\n  Total retried: {len(retry_entries)}\n  Restored: {r_restored}\n  Failed: {r_failed}\n  Time: {r_elapsed:.1f} sec")
-                # Verification after retry with countdown
+                # Verification after retry with improved countdown
                 countdown_timer(20)
                 print_info("Verifying entries after retry...")
-                # Merge entries for verification (all that should be present now)
+
                 all_entries = entries + retry_entries
                 verify_result = verify_restored_entries(all_entries, auth_token)
+                all_verified = True
                 for mt in sorted(verify_result):
                     present, total = verify_result[mt]
-                    print_info(f"Verification: {present} / {total} entries present in AniList ({mt}).")
-                    if total-present > 0:
+                    print_info(f"Verification: {present} / {total} imported entries present in AniList ({mt}).")
+                    if present != total:
                         print_info(f"{total-present} entries are still missing after restore.")
-                # Save failed again if any
+                        all_verified = False
+                if all_verified:
+                    print_success("Verification PASSED: All imported entries are present in your AniList!")
+                else:
+                    print_error("Verification FAILED: Some imported entries are missing from your AniList.")
                 if r_failed:
                     save_failed_entries(r_failed_entries, failed_data, failed_path)
     else:
