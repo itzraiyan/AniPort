@@ -11,7 +11,6 @@ Coordinates the restore (import) workflow with multi-account support:
 - Shows detailed stats (total, restored, failed, time taken).
 - Robust verification and account checking using token.
 - Explicit verification: checks that each imported entry is present in the user's AniList, regardless of total list size.
-- Automatically creates missing custom lists as needed for imported entries.
 """
 
 import os
@@ -24,7 +23,7 @@ from ui.prompts import (
 from ui.colors import boxed_text, print_boxed_safe
 from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup
 from anilist.auth import choose_account_flow
-from anilist.api import restore_entry, get_viewer_info, fetch_list, get_custom_lists, create_custom_list
+from anilist.api import restore_entry, get_viewer_info, fetch_list
 from ui.helptext import IMPORT_FILE_HELP
 
 def select_backup_file():
@@ -131,24 +130,9 @@ def import_entries(entries, auth_token):
     failed = 0
     failed_entries = []
     start = time.time()
-    type_to_custom_lists = {"ANIME": set(), "MANGA": set()}
-    for (media_type, entry) in entries:
-        # Support multiple custom lists: collect all, create all before restore
-        custom_lists = entry.get("customLists", []) or []
-        for cl in custom_lists:
-            type_to_custom_lists[media_type].add(cl)
-    for media_type in ("ANIME", "MANGA"):
-        if type_to_custom_lists[media_type]:
-            existing = get_custom_lists(auth_token, media_type)
-            missing = type_to_custom_lists[media_type] - existing
-            for name in missing:
-                print_info(f"Creating custom list '{name}' for {media_type} (if not already present)...")
-                create_custom_list(auth_token, media_type, name)
-
     from tqdm import tqdm
     for (media_type, entry) in tqdm(entries, desc="Restoring", unit="item"):
-        # Pass all custom lists; restore_entry only uses the first
-        ok = restore_entry(entry, media_type, auth_token, auto_create_custom_lists=False)
+        ok = restore_entry(entry, media_type, auth_token)
         if ok:
             restored += 1
         else:
