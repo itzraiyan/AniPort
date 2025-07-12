@@ -18,8 +18,13 @@ def color_text(text, color):
 def boxed_text(text, color="WHITE", width=60):
     import textwrap
     lines = []
-    for paragraph in text.split('\n'):
-        lines.extend(textwrap.wrap(paragraph, width=width) or [''])
+    # Improved wrapping: preserve blank lines between paragraphs, wrap each paragraph separately
+    paragraphs = text.split('\n')
+    for paragraph in paragraphs:
+        if paragraph.strip() == "":
+            lines.append("")
+        else:
+            lines.extend(textwrap.wrap(paragraph, width=width) or [''])
     # Remove trailing blank lines (unless the box is only a blank line)
     while len(lines) > 1 and lines[-1].strip() == "":
         lines.pop()
