@@ -155,35 +155,24 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
     print_error(f"Failed entries saved to: {failed_path}")
     print_info("You can retry importing this file later.")
 
-def spinner_progress_bar(task_message="Verifying restored entries in AniList...", seconds=7):
+def spinner_progress_bar(task_message="Verifying restored entries in AniList...", seconds=20):
     import itertools
-    import threading
+    import sys
+    import time
 
     spinner = itertools.cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-    total = seconds
-    progress = [0]
-    done = [False]
+    bar_len = 24
+    print_boxed_safe(task_message, "CYAN", 60)  # Print message ONCE
 
-    def spin():
-        while not done[0]:
-            bar_len = 30
-            percent = progress[0] / total
-            filled_len = int(bar_len * percent)
-            bar = "█" * filled_len + "-" * (bar_len - filled_len)
-            sys.stdout.write(
-                f"\r{task_message} {next(spinner)} [{bar}] {int(percent*100)}%"
-            )
-            sys.stdout.flush()
-            time.sleep(0.14)
-        sys.stdout.write("\r" + " " * (len(task_message) + 45) + "\r")
-
-    t = threading.Thread(target=spin)
-    t.start()
-    for i in range(total * 7):  # speed up, so it's not too slow
-        time.sleep(0.14)
-        progress[0] = min(total, (i + 1) / 7)
-    done[0] = True
-    t.join()
+    for i in range(bar_len + 1):
+        spin = next(spinner)
+        bar = "█" * i + "-" * (bar_len - i)
+        sys.stdout.write(f"\r{spin} [{bar}] {int(i/bar_len*100):3d}%")
+        sys.stdout.flush()
+        time.sleep(seconds / bar_len)
+    # Clear bar after complete
+    sys.stdout.write("\r" + " " * (bar_len + 14) + "\r")
+    sys.stdout.flush()
     print_boxed_safe("Verification complete!", "CYAN", 60)
 
 def print_post_verification_note():
