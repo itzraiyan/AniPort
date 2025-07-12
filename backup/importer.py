@@ -155,13 +155,13 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
     print_error(f"Failed entries saved to: {failed_path}")
     print_info("You can retry importing this file later.")
 
-def spinner_progress_bar(task_message="Verifying restored entries in AniList...", seconds=20):
+def spinner_progress_bar(task_message="Verifying restored entries in AniList...", seconds=15):
     import itertools
     import sys
     import time
 
     spinner = itertools.cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-    bar_len = 24
+    bar_len = 28
     print_boxed_safe(task_message, "CYAN", 60)  # Print message ONCE
 
     for i in range(bar_len + 1):
@@ -303,4 +303,3 @@ def import_workflow():
                     save_failed_entries(r_failed_entries, failed_data, failed_path)
     else:
         print_boxed_safe("Your AniList should now match your backup!", "CYAN", 60)
-        print_post_verification_note()
