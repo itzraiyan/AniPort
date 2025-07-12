@@ -4,6 +4,7 @@ backup/exporter.py
 Coordinates the export (backup) workflow:
 - Prompts for username, privacy, (optionally) filters.
 - Handles OAuth if private entries needed.
+- Supports saved accounts/tokens for quick private export.
 - Fetches list(s), applies filters, saves as JSON in output/.
 - Shows progress and summary.
 - Now shows detailed stats (exported/skipped, time taken, responsive output).
@@ -15,7 +16,7 @@ from ui.prompts import (
     confirm_boxed, menu_boxed, print_progress_bar
 )
 from anilist.api import get_user_id, fetch_list
-from anilist.auth import interactive_oauth
+from anilist.auth import interactive_oauth, get_saved_token, list_saved_accounts
 from backup.output import get_output_path, save_json_backup, ensure_output_dir
 from ui.helptext import USERNAME_HELP, EXPORT_PRIVACY_HELP, EXPORT_STATUS_HELP, EXPORT_TITLE_HELP, EXPORT_TYPE_HELP
 
@@ -29,16 +30,38 @@ def export_workflow():
             helpmsg=USERNAME_HELP
         )
 
-    privacy = menu_boxed(
-        "Does your AniList list include private entries?",
-        ["No (public only)", "Yes (private + public)"],
-        helpmsg=EXPORT_PRIVACY_HELP
-    )
-    use_oauth = (privacy == 2)
+    token = get_saved_token(username)
+    use_oauth = False
     auth_token = None
-    if use_oauth:
-        print_info("You will need AniList API credentials. Follow the prompts!")
-        _, auth_token = interactive_oauth()
+
+    if token:
+        print_info(f"Found a saved AniList OAuth token for '{username}'.")
+        # Offer quick options for export type
+        privacy_option = menu_boxed(
+            f"Do you want to use your saved token for '{username}' to export private + public entries?",
+            [
+                "No (public only)",
+                "Yes (private + public, use saved token)"
+            ],
+            helpmsg="If you choose 'Yes', AniPort will use your saved OAuth token for this account to export all entries including private ones. If you choose 'No', only public entries will be exported."
+        )
+        if privacy_option == 2:
+            use_oauth = True
+            auth_token = token
+        else:
+            use_oauth = False
+            auth_token = None
+    else:
+        # No saved token for this account; normal privacy prompt
+        privacy = menu_boxed(
+            "Does your AniList list include private entries?",
+            ["No (public only)", "Yes (private + public)"],
+            helpmsg=EXPORT_PRIVACY_HELP
+        )
+        use_oauth = (privacy == 2)
+        if use_oauth:
+            print_info("You will need AniList API credentials. Follow the prompts!")
+            _, auth_token = interactive_oauth(username)
 
     # Export type: anime, manga, or both
     exptype = menu_boxed(
