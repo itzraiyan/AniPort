@@ -9,6 +9,7 @@ Coordinates the restore (import) workflow with multi-account support:
 - Shows summary and friendly UI.
 - Writes failed entries to a separate failed restore file if any.
 - Shows detailed stats (total, restored, failed, time taken).
+- Robust verification and account checking using token.
 """
 
 import os
@@ -19,7 +20,7 @@ from ui.prompts import (
 )
 from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup
 from anilist.auth import choose_account_flow
-from anilist.api import restore_entry, get_viewer_username, get_user_id, fetch_list
+from anilist.api import restore_entry, get_viewer_info, fetch_list
 from ui.helptext import IMPORT_FILE_HELP
 
 def select_backup_file():
@@ -85,22 +86,43 @@ def get_entries_from_backup(backup_data):
     Returns list of tuples: (media_type, entry)
     """
     entries = []
+    # Dict with anime/manga keys
     if isinstance(backup_data, dict) and ("anime" in backup_data or "manga" in backup_data):
         if "anime" in backup_data:
             entries.extend((("ANIME", e) for e in backup_data["anime"]))
         if "manga" in backup_data:
             entries.extend((("MANGA", e) for e in backup_data["manga"]))
+    # Old format: flat list (must guess type)
     elif isinstance(backup_data, list):
-        entries = [("ANIME", e) for e in backup_data]
+        # Try to guess type from entries
+        for e in backup_data:
+            mtype = e.get("media", {}).get("type", None)
+            if mtype in ("ANIME", "MANGA"):
+                entries.append((mtype, e))
+            else:
+                entries.append(("ANIME", e))  # fallback, assume anime
     return entries
 
-def verify_restored_entries(entries, username, auth_token):
+def get_entry_types_in_backup(backup_data):
+    """Returns a set of types found: {"ANIME", "MANGA"}"""
+    types = set()
+    entries = get_entries_from_backup(backup_data)
+    for media_type, _ in entries:
+        types.add(media_type)
+    return types
+
+def verify_restored_entries(entries, auth_token):
     """
-    Verifies how many entries (by media.id and type) are present in the AniList of username.
+    Verifies how many entries (by media.id and type) are present in the AniList of the authenticated user.
+    Only checks the types present in the backup!
     Returns: dict: { "ANIME": (present, total), "MANGA": (present, total) }
     """
     result = {}
-    user_id = get_user_id(username)
+    viewer_info = get_viewer_info(auth_token)
+    if not viewer_info:
+        print_error("Failed to fetch account info for verification.")
+        return result
+    user_id = viewer_info["id"]
     type_map = {"ANIME": [], "MANGA": []}
     for (media_type, entry) in entries:
         type_map[media_type].append(entry)
@@ -111,6 +133,9 @@ def verify_restored_entries(entries, username, auth_token):
         current_ids = set(e["media"]["id"] for e in current_entries)
         total = len(type_map[media_type])
         present = sum(1 for e in type_map[media_type] if e["media"]["id"] in current_ids)
+        # Debug info (optional)
+        # print_info(f"Backup IDs ({media_type}): {[e['media']['id'] for e in type_map[media_type]]}")
+        # print_info(f"AniList IDs ({media_type}): {list(current_ids)}")
         result[media_type] = (present, total)
     return result
 
@@ -164,15 +189,30 @@ def import_workflow():
     print_info("Select which AniList account to restore to.")
     username, auth_token = choose_account_flow()
 
-    viewer = get_viewer_username(auth_token)
-    print_info(f"Authenticated as AniList user: {viewer}")
+    viewer_info = get_viewer_info(auth_token)
+    if not viewer_info:
+        print_error("Failed to fetch authenticated account info. Aborting.")
+        return
+    print_info(f"Authenticated as AniList user: {viewer_info['username']} (ID: {viewer_info['id']})")
+
+    # Warn if entered username does not match token account
+    if username and username != viewer_info['username']:
+        print_warning("Warning: The username you entered does not match the authenticated account.")
+        print_warning(f"Token username: {viewer_info['username']}, entered username: {username}")
+        if not confirm_boxed("Proceed anyway?"):
+            print_error("Operation aborted.")
+            return
 
     entries = get_entries_from_backup(backup_data)
     if not entries:
         print_error("No entries found in backup.")
         return
 
-    print_info(f"Ready to restore {len(entries)} entries to account: {username}. This will add/update your AniList.")
+    entry_types = get_entry_types_in_backup(backup_data)
+    entry_type_str = ", ".join(sorted(entry_types))
+    print_info(f"Detected entry types in backup: {entry_type_str}")
+
+    print_info(f"Ready to restore {len(entries)} entries to account: {viewer_info['username']}. This will add/update your AniList.")
     if not confirm_boxed("Proceed with restore?"):
         print_error("Restore cancelled.")
         return
@@ -185,11 +225,14 @@ def import_workflow():
 
     # Verification step
     print_info("Verifying restored entries in AniList...")
-    verify_result = verify_restored_entries(entries, username, auth_token)
-    for mt in verify_result:
+    # Wait a bit for AniList API to reflect changes
+    time.sleep(2)
+    verify_result = verify_restored_entries(entries, auth_token)
+    for mt in sorted(verify_result):
         present, total = verify_result[mt]
         print_info(f"Verification: {present} / {total} entries present in AniList ({mt}).")
-        print_info(f"{total-present} entries are still missing after restore.")
+        if total-present > 0:
+            print_info(f"{total-present} entries are still missing after restore.")
 
     # Handle failed entries
     failed_path = get_failed_restore_path(filepath)
@@ -212,11 +255,13 @@ def import_workflow():
                 print_info("Verifying entries after retry...")
                 # Merge entries for verification (all that should be present now)
                 all_entries = entries + retry_entries
-                verify_result = verify_restored_entries(all_entries, username, auth_token)
-                for mt in verify_result:
+                time.sleep(2)
+                verify_result = verify_restored_entries(all_entries, auth_token)
+                for mt in sorted(verify_result):
                     present, total = verify_result[mt]
                     print_info(f"Verification: {present} / {total} entries present in AniList ({mt}).")
-                    print_info(f"{total-present} entries are still missing after restore.")
+                    if total-present > 0:
+                        print_info(f"{total-present} entries are still missing after restore.")
                 # Save failed again if any
                 if r_failed:
                     save_failed_entries(r_failed_entries, failed_data, failed_path)
