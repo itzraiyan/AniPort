@@ -18,14 +18,13 @@ def color_text(text, color):
 def boxed_text(text, color="WHITE", width=60):
     import textwrap
     lines = []
-    # Improved wrapping: preserve blank lines between paragraphs, wrap each paragraph separately
+    # Improved: preserve blank lines between paragraphs, wrap each paragraph separately.
     paragraphs = text.split('\n')
     for paragraph in paragraphs:
         if paragraph.strip() == "":
             lines.append("")
         else:
             lines.extend(textwrap.wrap(paragraph, width=width) or [''])
-    # Remove trailing blank lines (unless the box is only a blank line)
     while len(lines) > 1 and lines[-1].strip() == "":
         lines.pop()
     if not lines:
@@ -48,3 +47,10 @@ def print_error(msg, width=60):
 
 def print_warning(msg, width=60):
     print(boxed_text(msg, "YELLOW", width))
+
+def print_boxed_safe(msg, color="WHITE", width=60):
+    try:
+        from tqdm import tqdm
+        tqdm.write(boxed_text(msg, color, width))
+    except ImportError:
+        print(boxed_text(msg, color, width))
