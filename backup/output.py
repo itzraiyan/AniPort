@@ -21,14 +21,18 @@ def get_output_path(username, media_type):
     return os.path.join(OUTPUT_DIR, f"{username}_{media_type}_backup.json")
 
 def save_json_backup(data, filename, overwrite=False):
-    if os.path.isfile(filename) and not overwrite:
-        if not confirm_boxed(f"File '{filename}' already exists. Overwrite?"):
-            print_error(f"Skipped writing {filename}")
-            return False
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print_success(f"Backup saved to {filename}")
-    return True
+    try:
+        if os.path.isfile(filename) and not overwrite:
+            if not confirm_boxed(f"File '{filename}' already exists. Overwrite?"):
+                print_error(f"Skipped writing {filename}")
+                return False
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print_success(f"Backup saved to {filename}")
+        return True
+    except Exception as e:
+        print_error(f"Failed to save backup: {e}")
+        return False
 
 def load_json_backup(filepath):
     if not os.path.isfile(filepath):
