@@ -3,11 +3,10 @@ anilist/api.py
 
 Handles all AniList GraphQL API queries and mutations:
 - User lookup
-- Fetching lists (public/private, anime/manga, with custom lists)
+- Fetching lists (public/private, anime/manga)
 - Filtering by status/title
 - SaveMediaListEntry mutations for restore
 - Viewer info for token/account verification
-- Creating custom lists if missing
 
 Depends on: anilist/auth.py, anilist/ratelimit.py, anilist/formatter.py
 """
@@ -82,7 +81,6 @@ def fetch_list(
                     progressVolumes
                     notes
                     private
-                    customLists
                     startedAt { year month day }
                     completedAt { year month day }
                     media {
@@ -109,71 +107,12 @@ def fetch_list(
             data = resp.json()
             lists = data["data"]["MediaListCollection"]["lists"]
             entries = [entry for lst in lists for entry in lst["entries"]]
-            # Fix customLists: ensure it's always a list, not a dict/object
-            for entry in entries:
-                cl = entry.get("customLists", None)
-                # If customLists is a dict (old bug), convert to list of keys with True value
-                if isinstance(cl, dict):
-                    entry["customLists"] = [k for k, v in cl.items() if v]
-                elif cl is None:
-                    entry["customLists"] = []
             filtered = filter_entries(entries, statuses, title_sub)
             return filtered
         else:
             handled = handle_rate_limit(resp)
             if not handled:
                 raise Exception(f"Failed to fetch {media_type} list: HTTP {resp.status_code} {resp.text}")
-
-def get_custom_lists(auth_token, media_type):
-    """
-    Returns a set of existing custom list names for the user (for anime or manga).
-    """
-    query = '''
-    query ($type: MediaType) {
-        Viewer {
-            mediaListOptions {
-                %s {
-                    customLists
-                }
-            }
-        }
-    }
-    ''' % ("animeList" if media_type == "ANIME" else "mangaList")
-    headers = { "Authorization": f"Bearer {auth_token}" }
-    resp = requests.post(ANILIST_API, json={"query": query, "variables": {"type": media_type}}, headers=headers)
-    if resp.status_code == 200:
-        options = resp.json()["data"]["Viewer"]["mediaListOptions"]
-        key = "animeList" if media_type == "ANIME" else "mangaList"
-        return set(options[key]["customLists"] or [])
-    return set()
-
-def create_custom_list(auth_token, media_type, list_name):
-    """
-    Adds a custom list (by name) to the user's list options. Only adds if not present.
-    """
-    existing = get_custom_lists(auth_token, media_type)
-    if list_name in existing:
-        return True  # Already exists
-
-    new_custom_lists = list(existing) + [list_name]
-    mutation = '''
-    mutation ($customLists: [String]) {
-      SaveUserOptions(
-        %s: { customLists: $customLists }
-      ) {
-        id
-      }
-    }
-    ''' % ("animeList" if media_type == "ANIME" else "mangaList")
-    variables = { "customLists": new_custom_lists }
-    headers = { "Authorization": f"Bearer {auth_token}" }
-    while True:
-        resp = requests.post(ANILIST_API, json={"query": mutation, "variables": variables}, headers=headers)
-        if resp.status_code == 200:
-            return True
-        handled = handle_rate_limit(resp)
-        if not handled:
-            return False
 
 def restore_entry(
     entry,
@@ -183,23 +122,10 @@ def restore_entry(
 ):
     """
     Restores a single entry using SaveMediaListEntry mutation.
-    If entry has customLists and any doesn't exist, creates it first if auto_create_custom_lists is True.
     Returns: True if success, False otherwise.
     """
-    # Accept either customLists (list), or customList (string, legacy)
-    custom_lists = entry.get("customLists", [])
-    custom_list = None
-    if isinstance(custom_lists, list) and custom_lists:
-        custom_list = custom_lists[0]  # Only one custom list can be set per mutation
-    elif isinstance(custom_lists, str):
-        custom_list = custom_lists
-    elif entry.get("customList"):
-        custom_list = entry.get("customList")
-    if custom_list and auto_create_custom_lists:
-        create_custom_list(auth_token, media_type, custom_list)
-
     mutation = '''
-    mutation ($mediaId: Int, $status: MediaListStatus, $score: Float, $progress: Int, $progressVolumes: Int, $notes: String, $startedAt: FuzzyDateInput, $completedAt: FuzzyDateInput, $private: Boolean, $customList: String) {
+    mutation ($mediaId: Int, $status: MediaListStatus, $score: Float, $progress: Int, $progressVolumes: Int, $notes: String, $startedAt: FuzzyDateInput, $completedAt: FuzzyDateInput, $private: Boolean) {
       SaveMediaListEntry(
         mediaId: $mediaId,
         status: $status,
@@ -209,8 +135,7 @@ def restore_entry(
         notes: $notes,
         startedAt: $startedAt,
         completedAt: $completedAt,
-        private: $private,
-        customList: $customList
+        private: $private
       ) {
         id
         status
@@ -227,7 +152,6 @@ def restore_entry(
         "private": entry.get("private"),
         "startedAt": entry.get("startedAt"),
         "completedAt": entry.get("completedAt"),
-        "customList": custom_list,
     }
     variables = {k: v for k, v in variables.items() if v is not None}
     headers = {
