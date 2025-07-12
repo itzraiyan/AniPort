@@ -283,11 +283,14 @@ def import_workflow():
     verify_result = verify_restored_entries(entries, auth_token)
 
     all_verified = True
+    total_failed_verification = 0
     for mt in sorted(verify_result):
         present, total = verify_result[mt]
         print_info(f"Verification: {present} / {total} imported entries present in AniList ({mt}).")
         if present != total:
-            print_info(f"{total-present} entries are still missing after restore.")
+            missing = total - present
+            print_error(f"{missing} entries are still missing after restore ({mt}).")
+            total_failed_verification += missing
             all_verified = False
 
     # Show AniList refresh note IMMEDIATELY after the verification lines (before PASSED/FAILED summary)
@@ -298,6 +301,7 @@ def import_workflow():
         print_success("Verification PASSED: All imported entries are present in your AniList!")
     else:
         print_error("Verification FAILED: Some imported entries are missing from your AniList.")
+        print_error(f"Total failed verification entries: {total_failed_verification}")
 
     # Handle failed entries
     failed_path = get_failed_restore_path(filepath)
@@ -323,11 +327,14 @@ def import_workflow():
                 all_entries = entries + retry_entries
                 verify_result = verify_restored_entries(all_entries, auth_token)
                 all_verified = True
+                total_failed_verification = 0
                 for mt in sorted(verify_result):
                     present, total = verify_result[mt]
                     print_info(f"Verification: {present} / {total} imported entries present in AniList ({mt}).")
                     if present != total:
-                        print_info(f"{total-present} entries are still missing after restore.")
+                        missing = total - present
+                        print_error(f"{missing} entries are still missing after restore ({mt}).")
+                        total_failed_verification += missing
                         all_verified = False
                 # Show AniList refresh note again after retry verification, before PASSED/FAILED summary
                 print_post_verification_note()
@@ -335,6 +342,7 @@ def import_workflow():
                     print_success("Verification PASSED: All imported entries are present in your AniList!")
                 else:
                     print_error("Verification FAILED: Some imported entries are missing from your AniList.")
+                    print_error(f"Total failed verification entries: {total_failed_verification}")
                 if r_failed:
                     save_failed_entries(r_failed_entries, failed_data, failed_path)
     else:
