@@ -94,7 +94,7 @@ def get_entries_from_backup(backup_data):
             if mtype in ("ANIME", "MANGA"):
                 entries.append((mtype, e))
             else:
-                entries.append(("ANIME", e))  # fallback, assume anime
+                entries.append(("ANIME", e))
     return entries
 
 def get_entry_types_in_backup(backup_data):
@@ -133,8 +133,9 @@ def import_entries(entries, auth_token):
     start = time.time()
     type_to_custom_lists = {"ANIME": set(), "MANGA": set()}
     for (media_type, entry) in entries:
-        cl = entry.get("customList")
-        if cl:
+        # Support multiple custom lists: collect all, create all before restore
+        custom_lists = entry.get("customLists", []) or []
+        for cl in custom_lists:
             type_to_custom_lists[media_type].add(cl)
     for media_type in ("ANIME", "MANGA"):
         if type_to_custom_lists[media_type]:
@@ -146,6 +147,7 @@ def import_entries(entries, auth_token):
 
     from tqdm import tqdm
     for (media_type, entry) in tqdm(entries, desc="Restoring", unit="item"):
+        # Pass all custom lists; restore_entry only uses the first
         ok = restore_entry(entry, media_type, auth_token, auto_create_custom_lists=False)
         if ok:
             restored += 1
