@@ -190,6 +190,22 @@ def countdown_timer(seconds=20):
     msg = "Proceeding to verification..."
     print(boxed_text(msg, "YELLOW", 60))
 
+def print_post_verification_note():
+    # Direct link to AniList settings
+    link = "https://anilist.co/settings/list"
+    note = (
+        "Note:\n"
+        "If you do not immediately see all your imported entries on AniList, don't worry!\n"
+        "AniList sometimes requires a manual refresh for new entries to appear in your list.\n"
+        "To update your list:\n"
+        "  1. Go to your AniList list settings page: \n"
+        f"     {link}\n"
+        "  2. Click on “Update Stats” and then “Unhide Entries.”\n"
+        "This will refresh your lists and make all imported entries visible.\n"
+        "You can also try refreshing your browser after doing this."
+    )
+    print_info(note, width=60)
+
 def import_workflow():
     print_info("Let's restore your AniList from a backup JSON!")
 
@@ -257,6 +273,9 @@ def import_workflow():
             print_info(f"{total-present} entries are still missing after restore.")
             all_verified = False
 
+    # Show AniList refresh note IMMEDIATELY after the verification lines (before PASSED/FAILED summary)
+    print_post_verification_note()
+
     # Final verification summary
     if all_verified:
         print_success("Verification PASSED: All imported entries are present in your AniList!")
@@ -293,6 +312,8 @@ def import_workflow():
                     if present != total:
                         print_info(f"{total-present} entries are still missing after restore.")
                         all_verified = False
+                # Show AniList refresh note again after retry verification, before PASSED/FAILED summary
+                print_post_verification_note()
                 if all_verified:
                     print_success("Verification PASSED: All imported entries are present in your AniList!")
                 else:
@@ -301,3 +322,4 @@ def import_workflow():
                     save_failed_entries(r_failed_entries, failed_data, failed_path)
     else:
         print_info("Your AniList should now match your backup!")
+        print_post_verification_note()
