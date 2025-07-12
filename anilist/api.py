@@ -6,6 +6,7 @@ Handles all AniList GraphQL API queries and mutations:
 - Fetching lists (public/private, anime/manga)
 - Filtering by status/title
 - SaveMediaListEntry mutations for restore
+- Viewer info for token/account verification
 
 Depends on: anilist/auth.py, anilist/ratelimit.py, anilist/formatter.py
 """
@@ -30,6 +31,28 @@ def get_user_id(username):
         if uid:
             return uid
     raise Exception(f"Unable to find AniList user '{username}'.")
+
+def get_viewer_info(token):
+    """
+    Returns dict { "id": ..., "username": ... } for authenticated user.
+    """
+    query = '''
+    query { Viewer { id name } }
+    '''
+    headers = { "Authorization": f"Bearer {token}" }
+    resp = requests.post(ANILIST_API, json={"query": query}, headers=headers)
+    if resp.status_code == 200:
+        viewer = resp.json()["data"]["Viewer"]
+        return {"id": viewer["id"], "username": viewer["name"]}
+    return None
+
+def get_viewer_username(token):
+    info = get_viewer_info(token)
+    return info["username"] if info else None
+
+def get_viewer_id(token):
+    info = get_viewer_info(token)
+    return info["id"] if info else None
 
 def fetch_list(
     user_id,
@@ -154,23 +177,6 @@ def test_token(token):
     query = '''
     query { Viewer { id name } }
     '''
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
+    headers = { "Authorization": f"Bearer {token}" }
     resp = requests.post(ANILIST_API, json={"query": query}, headers=headers)
     return resp.status_code == 200
-
-def get_viewer_username(token):
-    """
-    Returns the AniList username for the access token holder.
-    """
-    query = '''
-    query { Viewer { name } }
-    '''
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
-    resp = requests.post(ANILIST_API, json={"query": query}, headers=headers)
-    if resp.status_code == 200:
-        return resp.json()["data"]["Viewer"]["name"]
-    return None
