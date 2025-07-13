@@ -62,7 +62,7 @@ def show_motd_if_needed():
         # If remote is different from local, show update prompt every time!
         print_boxed_safe(
             "A new AniPort update is available!\n\n"
-            "Please exit the program & run 'git pull' to get the latest features & fixes.\n\n"
+            "The program has exited. Run 'git pull' to get the latest features & fixes.\n\n"
             "Update notes:\n" + remote_msg,
             "YELLOW", 60
         )
