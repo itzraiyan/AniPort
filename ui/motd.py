@@ -3,6 +3,12 @@ import hashlib
 import json
 from ui.colors import print_boxed_safe
 
+try:
+    import requests
+except ImportError:
+    requests = None  # We'll show a warning if requests is not installed
+
+REMOTE_MOTD_URL = "https://raw.githubusercontent.com/itzraiyan/AniPort/main/motd.txt"
 MOTD_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "motd.txt")
 STATE_FILE = os.path.expanduser("~/.aniport_seen_motd.json")
 
@@ -35,8 +41,34 @@ def record_seen_motd(msg_hash):
     except Exception:
         pass
 
+def fetch_remote_motd():
+    if not requests:
+        return None  # Can't fetch without requests
+    try:
+        resp = requests.get(REMOTE_MOTD_URL, timeout=5)
+        if resp.status_code == 200:
+            return resp.text
+    except Exception:
+        pass
+    return None
+
 def show_motd_if_needed():
-    msg = get_motd_message()
+    # 1. Try to fetch remote MOTD
+    remote_msg = fetch_remote_motd()
+    local_msg = get_motd_message()
+
+    if remote_msg and (remote_msg.strip() != (local_msg or "").strip()):
+        # If remote is different from local, show update prompt every time!
+        print_boxed_safe(
+            "A new AniPort update is available!\n\n"
+            "Please run 'git pull' to get the latest features & fixes.\n\n"
+            "Update notes:\n" + remote_msg,
+            "RED", 60
+        )
+        return
+
+    # If remote is same as local, or remote unavailable, fallback to local MOTD logic
+    msg = local_msg
     if not msg:
         return
     msg_hash = get_motd_hash(msg)
