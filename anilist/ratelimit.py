@@ -21,7 +21,14 @@ def handle_rate_limit(resp):
     except ImportError:
         use_tqdm = False
 
-    def info(msg):
+    try:
+        from ui.colors import color_text
+    except ImportError:
+        def color_text(text, color): return text
+
+    def info(msg, color=None):
+        if color:
+            msg = color_text(msg, color)
         if use_tqdm:
             tqdm.write(msg)
         else:
@@ -30,21 +37,22 @@ def handle_rate_limit(resp):
     def spinner_wait(wait, hit_number):
         spinner = ['|', '/', '-', '\\']
         msg = f"Waiting... {wait} seconds [Rate limit hit #{hit_number}] (press Ctrl+C to cancel)"
-        info(msg)
+        info(msg, color="RED")
         start = time.time()
         frame = 0
         try:
             while time.time() - start < wait:
-                sys.stdout.write('\r' + f"[{spinner[frame % len(spinner)]}] Waiting...")
+                sys.stdout.write(color_text('\r' + f"[{spinner[frame % len(spinner)]}] Waiting...", "RED"))
                 sys.stdout.flush()
                 time.sleep(0.12)
                 frame += 1
+            # Clear line after waiting
             sys.stdout.write('\r' + ' ' * 40 + '\r')
             sys.stdout.flush()
         except KeyboardInterrupt:
             sys.stdout.write('\n')
             sys.stdout.flush()
-            info("Interrupted during rate limit wait. Exiting...")
+            info("Interrupted during rate limit wait. Exiting...", color="YELLOW")
             raise
 
     # AniList returns 429 for rate limit
@@ -60,7 +68,7 @@ def handle_rate_limit(resp):
         else:
             wait = 15
         spinner_wait(wait, hit_number)
-        info("Rate limit wait over! Resuming your restoring process...")
+        info("Rate limit wait over! Resuming your restoring process...", color="GREEN")
         return True
 
     # Sometimes 400 with rate limit error in body
@@ -73,7 +81,7 @@ def handle_rate_limit(resp):
                     hit_number = rate_limit_counter["count"]
                     wait = 15
                     spinner_wait(wait, hit_number)
-                    info("Rate limit wait over! Resuming your restoring process...")
+                    info("Rate limit wait over! Resuming your restoring process...", color="GREEN")
                     return True
     except Exception:
         pass
