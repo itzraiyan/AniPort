@@ -27,6 +27,8 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 * 🔁 **Retry failed restores:** If any entries fail to import, AniPort saves them separately and allows you to retry in one click
 * 🛠️ **Extensible and robust:** Handles old and new backup formats, and future features are easy to add!
 * 🏷️ **Detailed progress and stats:** See how many entries were restored, failed, and verified, with friendly summaries
+* 🚫 **No duplicate imports:** AniPort automatically skips entries already present in your AniList account and shows you how many were skipped.
+* 💾 **Safe cancellation:** If you cancel an import, AniPort saves any not-yet-imported entries to a separate JSON file and tells you where to find it for easy resuming.
 
 ---
 
