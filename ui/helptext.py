@@ -1,24 +1,29 @@
 TOOL_OVERVIEW = (
-    "AniList Backup & Restore Tool\n"
-    "-----------------------------------\n"
-    "• Export (backup) your anime/manga lists from AniList as JSON files.\n"
-    "    - Public and private entries supported.\n"
-    "    - Filter by status (e.g., Completed, Watching) or title.\n"
-    "    - No authentication needed for public lists; OAuth for private entries.\n"
-    "• Restore (import) a backup to any AniList account.\n"
-    "    - Full OAuth authentication required for importing.\n"
-    "    - Handles AniList rate limiting safely.\n"
-    "• All operations are fully terminal/Termux-friendly, with anime-themed banners, colors, and -help at every prompt!\n"
-    "• Your data is exported to the output/ folder.\n"
-    "• No MAL here! This tool is for AniList only.\n"
-    "• Enjoy the anime vibes and keep your lists safe!\n"
+    "AniPort: AniList Backup & Restore Tool\n"
+    "─────────────────────────────────────────────\n"
+    "• Termux- and terminal-friendly, fully interactive and responsive UI.\n"
+    "• Anime-themed banners, boxed text, and inspirational quotes at every session.\n"
+    "• Easily export (backup) your AniList anime/manga lists to local JSON files in the output/ folder.\n"
+    "• Import (restore) backups to any AniList account, including full OAuth authentication for private entries.\n"
+    "• Account management: save multiple AniList accounts, switch and verify before import/export.\n"
+    "• Smart filtering: export by status and/or title substring for tailored backups.\n"
+    "• Secure: OAuth authentication, never asks for your AniList password.\n"
+    "• Robust rate limit handling, built-in progress bars and responsive feedback for every operation.\n"
+    "• Detailed summaries after backup/restore: see how many entries were processed, failed, or verified, with clear tips.\n"
+    "• Failed entries are saved for easy retry; verification ensures your AniList matches your backup after restore.\n"
+    "• All prompts support -help for context-sensitive guidance.\n"
+    "• Designed for all skill levels—zero coding required!\n"
+    "• Works on Android (Termux), Linux, Windows, and more.\n"
+    "• For AniList only (not MAL).\n"
+    "─────────────────────────────────────────────\n"
+    "Enjoy secure, anime-powered backups and restores—your lists are safe and your experience is fun!"
 )
 
 MAIN_MENU_HELP = (
     "Choose what you'd like to do:\n"
-    "1: Export - Backup your AniList lists as JSON files.\n"
-    "2: Import - Restore a backup JSON to an AniList account (requires authentication).\n"
-    "3: Learn more - Get detailed explanation about all features and how the tool works.\n"
+    "1: Export - Backup your AniList lists as JSON files (anime and/or manga).\n"
+    "2: Import - Restore a backup JSON to any AniList account (with authentication and verification).\n"
+    "3: Learn more - Get a detailed overview about features, flows, and UI tips.\n"
     "4: Exit - Leave the tool.\n"
     "Type -help at any prompt for context-sensitive help."
 )
@@ -27,51 +32,55 @@ AUTH_CLIENT_ID_HELP = (
     "To get your AniList Client ID:\n"
     "1. Go to: https://anilist.co/settings/developer\n"
     "2. Click 'Create New Client'.\n"
-    "3. For the name, enter: AniPort\n"
-    "4. For the Redirect URL, enter: http://localhost\n"
-    "5. Click 'Create'.\n"
-    "6. After creating, copy the Client ID shown in the table.\n"
+    "3. Name = AniPort, Redirect URL = http://localhost\n"
+    "4. Click 'Create' and copy the Client ID from the table.\n"
     "Paste that value here."
 )
 
 AUTH_CLIENT_SECRET_HELP = (
-    "After creating your AniPort client on AniList (see previous help),\n"
-    "copy the Client Secret shown in the developer table and paste it here."
+    "After creating your AniPort client on AniList, copy the Client Secret from the developer table and paste it here."
 )
 
 AUTH_REDIRECT_URL_HELP = (
-    "After you approve access in your browser, AniList will redirect you to a page (it may fail to open on localhost, that's OK!).\n"
-    "Just copy the full URL from your browser's address bar (it will contain ?code=...), and paste it here.\n"
-    "The tool will extract the code automatically."
+    "After approving access in your browser, AniList will redirect you to a page (it may fail to connect, that's OK!).\n"
+    "Copy the full URL from your browser's address bar (it will contain ?code=...), and paste it here."
 )
 
 USERNAME_HELP = (
-    "Enter your AniList username. This is the name shown on your AniList profile page."
+    "Enter your AniList username (as shown on your AniList profile page).\n"
+    "This is not your email—use your display name!"
 )
 
 EXPORT_PRIVACY_HELP = (
-    "If you want to export private list entries, choose 'Yes' and follow the OAuth prompts.\n"
-    "Otherwise, 'No' will export only public entries and requires no authentication."
+    "Choose 'Yes' if you want private entries included (requires OAuth authentication).\n"
+    "Choose 'No' for public entries only (no authentication needed)."
 )
 
 EXPORT_TYPE_HELP = (
-    "Choose 'Anime only' to export only your anime list, 'Manga only' for manga, or 'Both' for both lists."
+    "Anime only: Export just your anime list.\n"
+    "Manga only: Export just your manga list.\n"
+    "Both: Export both lists together."
 )
 
 EXPORT_STATUS_HELP = (
-    "You can filter exported entries by status (e.g. COMPLETED, CURRENT, DROPPED).\n"
-    "Enter status numbers or codes, separated by spaces or commas."
+    "Export only entries with specific statuses (e.g. Completed, Watching).\n"
+    "Type status code or number (separated by spaces or commas):\n"
+    "1. COMPLETED   2. CURRENT   3. DROPPED   4. PAUSED   5. PLANNING   6. REPEATING"
 )
 
 EXPORT_TITLE_HELP = (
-    "You can filter exported entries by title substring. Only entries whose title includes the given text (case-insensitive) will be exported."
+    "Export only entries whose title contains a specific substring (case-insensitive)."
 )
 
 IMPORT_FILE_HELP = (
-    "This should be the path to a JSON backup created by this tool (e.g., output/YourName_anime_backup.json)."
+    "Enter the path to a backup JSON file created by this tool (e.g., output/MyAnimeName_anime_backup.json).\n"
+    "You may select from detected files, or enter a custom path if needed."
 )
 
 IMPORT_ACCOUNT_HELP = (
-    "Choose 'Same account' if you're restoring to the account you exported from.\n"
-    "Choose 'New account' if you're moving your list to another AniList account."
+    "Choose which AniList account to restore to:\n"
+    "- Use a saved account (previously authenticated)\n"
+    "- Add a new account (requires OAuth)\n"
+    "- Remove a saved account\n"
+    "Account verification is automatic; the tool will warn if you mismatch usernames."
 )
