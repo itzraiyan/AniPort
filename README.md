@@ -10,89 +10,23 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 
 ---
 
-## ✨ Features 
+## ✨ Features
 
-* 🖼️ **Anime-themed terminal interface**
-  - Random ASCII art banners appear on launch for an immersive experience.
-  - Inspirational anime quotes are shown to brighten your session.
-  - All prompts and messages use colors and boxed text for maximum readability.
-  - Human-friendly explanations are available at every prompt—type `-help` for context-sensitive help.
-
-* 🗂️ **Export (backup) your AniList lists**
-  - Export both anime and manga lists, including public and private entries.
-  - Backups are saved as well-structured JSON files in the `output/` folder.
-  - You can filter exported entries by status (e.g., Completed, Watching) or by a title substring.
-  - Export type selection: Anime only, Manga only, or Both.
-  - Detailed progress bar and stats at the end of the export.
-  - Privacy options: Export just public entries (no authentication needed), or include private entries (OAuth required).
-  - Supports saved OAuth tokens for quick private exports.
-
-* 🔄 **Import (restore) backups to any AniList account**
-  - Robust validation of backup files (supports both old and new formats).
-  - Multi-account support: Save and reuse multiple AniList accounts and tokens.
-  - Friendly account selection and management UI—add, choose, or remove accounts easily.
-  - Explicit account verification: Tool checks the authenticated username and ID before restoring.
-  - Restore process uses the AniList API’s SaveMediaListEntry mutation for each entry, with progress bars and stats.
-  - Failed restores are saved to a `.failed.json` for easy retry.
-  - Detailed verification after restore: Compares imported entries to your AniList to ensure everything matches.
-  - Option to retry failed/missing entries instantly.
-  - Post-verification tips to help you refresh your AniList and see new entries.
-
-* 🔍 **Smart filtering**
-  - Export by status (Completed, Watching, Dropped, etc.) with easy number/code selection.
-  - Export by title substring (case-insensitive).
-  - Filters are applied before backup is created, ensuring only desired entries are saved.
-
-* 🔒 **Secure authentication**
-  - Uses AniList OAuth for private entries and for restoring backups.
-  - Never asks for your AniList password—uses secure API tokens only.
-  - Guides you through getting your AniList API Client ID and Client Secret step-by-step.
-  - OAuth tokens are stored locally in your home directory (`~/.aniport_accounts.json`) and can be deleted at any time.
-
-* 📂 **Local-only data storage**
-  - All backups are saved in the `output/` folder.
-  - No data or tokens are sent anywhere except AniList API.
-  - You have full control over your files and accounts.
-
-* 🛡️ **Rate limit protection**
-  - AniList API rate limits are detected and handled gracefully.
-  - Friendly spinner animation and countdown during rate limit waits.
-  - The restore process automatically retries after rate limits.
-
-* 🐍 **Pure Python, no platform lock-in**
-  - Works on Android (Termux), Linux, and Windows.
-  - No external dependencies except standard Python packages and those listed in `requirements.txt`.
-  - No need for advanced coding knowledge—every step is guided.
-
-* 🌱 **Zero coding required**
-  - All operations are interactive—just run and follow the prompts.
-  - Designed for all skill levels, with extra help and explanations everywhere.
-
-* 🧑‍💻 **Account and token verification**
-  - Ensures the correct AniList account is being used for backup/restore.
-  - Clear warnings if entered username does not match authenticated token account.
-  - Always displays authenticated username and ID before restoring—prevents mistakes.
-
-* 🧩 **Intelligent media-type detection**
-  - Automatically detects whether your backup contains anime, manga, or both, and restores accordingly.
-  - Verification only checks the imported media types—no unnecessary API calls.
-
-* 🕒 **Automatic countdown before verification**
-  - After restoring, AniPort waits (with a friendly progress bar) to give AniList servers time to update.
-  - Verification is only performed after countdown to ensure accuracy.
-
-* 🔁 **Retry failed restores**
-  - If any entries fail to import, AniPort saves them separately and allows you to retry in one click.
-  - Multiple retries are supported until all entries are restored.
-
-* 🛠️ **Extensible and robust**
-  - Designed for future features—codebase is modular and easy to maintain.
-  - Handles both old and new backup formats.
-  - Easy to add new filters, formatting, and output options.
-
-* 🏷️ **Detailed progress and stats**
-  - See how many entries were exported, restored, failed, and verified, with summaries and color-coded messages.
-  - All stats are shown in friendly boxed text for easy reading.
+* 🖼️ **Anime-themed terminal interface** with random ASCII art and inspirational anime quotes to keep your spirits high!
+* 🗂️ **Export (backup)** your AniList lists to JSON files (public & private entries are supported)
+* 🔄 **Import (restore)** backups to any AniList account, with robust verification and multi-account support
+* 🔍 **Smart filtering** — Export by status or title substring
+* 🔒 **Secure:** Uses AniList OAuth for private entries (never asks for your password)
+* 📂 **All local:** Your data is saved in the `output/` folder, and nowhere else
+* 🛡️ **Rate limit protection:** Handles AniList API gently and safely
+* 🐍 **Pure Python** — Works on Android (Termux), Linux, and Windows
+* 🌱 **Zero coding required:** Designed for all skill levels
+* 🧑‍💻 **Account and token verification:** Ensures the correct AniList account is being used, with clear warnings if account/token don't match
+* 🧩 **Intelligent media-type detection:** Only verifies and restores the correct types (anime, manga, or both) based on your backup file
+* 🕒 **Automatic countdown before verification:** Gives AniList servers time to update, showing you a friendly, real-time countdown
+* 🔁 **Retry failed restores:** If any entries fail to import, AniPort saves them separately and allows you to retry in one click
+* 🛠️ **Extensible and robust:** Handles old and new backup formats, and future features are easy to add!
+* 🏷️ **Detailed progress and stats:** See how many entries were restored, failed, and verified, with friendly summaries
 
 ---
 
