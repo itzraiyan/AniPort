@@ -4,6 +4,7 @@ backup/output.py
 - Ensures the output/ directory exists for backups.
 - Handles file existence, overwrite confirmation, and basic JSON save/load helpers.
 - Validates backup file structure for import.
+- Adds left out file path helper for interrupted restores.
 """
 
 import os
@@ -54,3 +55,9 @@ def validate_backup_json(data):
         # Old format: just a list of entries
         return True
     return False
+
+def get_leftout_restore_path(orig_path):
+    dirname, filename = os.path.split(orig_path)
+    base, ext = os.path.splitext(filename)
+    leftout_name = f"{base}.leftout{ext}"
+    return os.path.join(dirname or ".", leftout_name)
