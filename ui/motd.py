@@ -1,6 +1,7 @@
 import os
 import hashlib
 import json
+import sys
 from ui.colors import print_boxed_safe
 
 try:
@@ -61,11 +62,11 @@ def show_motd_if_needed():
         # If remote is different from local, show update prompt every time!
         print_boxed_safe(
             "A new AniPort update is available!\n\n"
-            "Please run 'git pull' to get the latest features & fixes.\n\n"
+            "Please exit the program & run 'git pull' to get the latest features & fixes.\n\n"
             "Update notes:\n" + remote_msg,
-            "RED", 60
+            "YELLOW", 60
         )
-        return
+        sys.exit(0)
 
     # If remote is same as local, or remote unavailable, fallback to local MOTD logic
     msg = local_msg
@@ -74,5 +75,5 @@ def show_motd_if_needed():
     msg_hash = get_motd_hash(msg)
     if has_seen_motd(msg_hash):
         return
-    print_boxed_safe(msg, "YELLOW", 60)
+    print_boxed_safe(msg, "CYAN", 60)
     record_seen_motd(msg_hash)
