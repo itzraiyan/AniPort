@@ -1,4 +1,14 @@
-🟢 AniPort v1.6.0 update!
+• AniPort MOTD Test Message!
+
+Hello, AniPort user! This is a test of the new admin message (MOTD) feature.
+If you can see this box, the system is working perfectly.
+
+- This message will only show once, unless you update this motd.txt file.
+- You can use it to share update notes, tips, or important announcements.
+
+Happy testing! 🚀
+
+• AniPort v1.6.0 update!
 - Added admin message system
 - Improved export speed
 - Fixed bug with manga lists
