@@ -407,25 +407,32 @@ Your AniList should now match your backup!
 
 ```
 AniPort/
-├── anilist/
-│   ├── api.py         # AniList API queries/mutations, list fetching, restore logic, filtering
-│   ├── auth.py        # OAuth flow, account management, token storage and selection
-│   ├── formatter.py   # Filtering and formatting logic for backup/restore
-│   ├── ratelimit.py   # Rate limit detection and spinner animation for waits
-├── backup/
-│   ├── exporter.py    # Backup/export workflow (main export logic & user prompts)
-│   ├── importer.py    # Restore/import workflow (main restore logic & user prompts)
-│   ├── output.py      # Output directory helpers, JSON file save/load, validation
-├── ui/
-│   ├── banners.py     # ASCII art banners, random anime quotes, intro/outro text
-│   ├── colors.py      # Colorful boxed text, info/success/error/warning helpers
-│   ├── helptext.py    # All detailed help messages for every prompt and menu
-│   ├── prompts.py     # Prompt and menu logic, progress bar, confirmation, boxed text
-├── output/            # Your backups are stored here! (JSON files, failed restores, etc.)
-├── main.py            # Entry point – anime-themed main menu, main workflow logic
-├── requirements.txt   # Python dependencies (requests, colorama, tqdm, rich)
-├── LICENSE            # MIT License
-└── README.md          # This very detailed documentation!
+│
+├── anilist/                 # AniList API logic (all interaction with AniList itself)
+│   ├── api.py               # Handles GraphQL queries/mutations: fetch lists, restore entries, user info
+│   ├── auth.py              # Manages AniList OAuth authentication, account/token storage and selection
+│   ├── formatter.py         # Filters and formats entries for backup/restore (by status, title, etc.)
+│   ├── ratelimit.py         # Detects and manages AniList API rate limits, with wait spinner
+│
+├── backup/                  # Backup and restore workflow logic
+│   ├── exporter.py          # Main export (backup) workflow: prompts, applies filters, saves to JSON
+│   ├── importer.py          # Main import (restore) workflow: prompts, imports entries, handles retries/verification
+│   ├── output.py            # Handles output/ directory, saving/loading/validating backup JSON files
+│
+├── ui/                      # User interface components (terminal UX)
+│   ├── banners.py           # Prints ASCII art banners, random anime quotes, intro/outro
+│   ├── colors.py            # Functions for colored, boxed terminal output and printing info/warning/error
+│   ├── helptext.py          # Contains all long help messages for various prompts/menus
+│   ├── prompts.py           # All user prompts, menus, confirmation dialogs, progress bars
+│   ├── motd.py              # NEW: Admin message system — shows a message from motd.txt if changed
+│
+├── output/                  # (Directory) Stores user backups and failed/leftout restore files (created at runtime)
+│
+├── main.py                  # Program entry point. Shows main menu, routes to export/import/info, prints banners/quotes
+├── motd.txt                 # NEW: Admin message file — update/commit this to show users a one-time message
+├── requirements.txt         # Lists all Python dependencies needed to run AniPort
+├── LICENSE                  # MIT License for AniPort
+└── README.md                # Main documentation, usage guide, and project structure
 ```
 
 ---
