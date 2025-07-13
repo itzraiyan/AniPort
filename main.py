@@ -3,9 +3,7 @@
 AniList Backup Tool - Main CLI Entrypoint
 
 Handles session start, banner and intro, main menu, and routes to export/import/info flows.
-All UX is decorated and anime-themed, as per the project style guide.
-
-Author: AniXWeebs
+All UX is decorated and anime-themed, as per the project style guide
 """
 
 import sys
@@ -15,6 +13,7 @@ import os
 from ui.banners import print_banner, print_outro, print_random_quote
 from ui.prompts import menu_boxed, print_info, print_success, print_error, prompt_boxed
 from ui.helptext import TOOL_OVERVIEW, MAIN_MENU_HELP
+from ui.motd import show_motd_if_needed   # <-- ADDED
 
 # ===== Import Workflow Modules =====
 from backup.exporter import export_workflow
@@ -26,6 +25,7 @@ from backup.output import ensure_output_dir
 def main():
     ensure_output_dir()
     print_banner()
+    show_motd_if_needed()    # <-- ADDED
     print_info("Welcome to your AniList Backup & Restore Tool!\n")
     print_random_quote()
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         # Improved boxed message for Ctrl+C
         from ui.colors import boxed_text
-        msg = boxed_text("Interrupted by user. Goodbye! 🐾", "RED", 60)
+        msg = boxed_text("Interrupted by user. Goodbye!", "RED", 60)
         print(msg)
         sys.exit(0)
     except Exception as e:
