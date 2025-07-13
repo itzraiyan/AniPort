@@ -6,9 +6,10 @@ Coordinates the restore (import) workflow with multi-account support:
 - Looks for JSON backups in output/, helps user select or enter a path.
 - Reads and validates backup JSON.
 - Restores entries using SaveMediaListEntry (with rate limit handling and progress bar).
+- Skips already-present entries and notifies user.
 - Shows summary and friendly UI.
 - Writes failed entries to a separate failed restore file if any.
-- Shows detailed stats (total, restored, failed, time taken).
+- Shows detailed stats (total, restored, skipped, failed, time taken).
 - Robust verification and account checking using token.
 - Explicit verification: checks that each imported entry is present in the user's AniList, regardless of total list size.
 """
@@ -190,6 +191,41 @@ def print_post_verification_note():
     )
     print_boxed_safe(note, "CYAN", 60)
 
+def filter_entries_already_present(entries, auth_token):
+    """
+    Given entries [(media_type, entry)], returns (to_import, already_present).
+    already_present contains entries found in user's list by media ID.
+    """
+    viewer_info = get_viewer_info(auth_token)
+    user_id = viewer_info["id"]
+    # Fetch current anime/manga entries
+    anime_present_ids = set()
+    manga_present_ids = set()
+    anime_entries = []
+    manga_entries = []
+    for (media_type, entry) in entries:
+        if media_type == "ANIME":
+            anime_entries.append(entry)
+        elif media_type == "MANGA":
+            manga_entries.append(entry)
+    if anime_entries:
+        current_anime = fetch_list(user_id, "ANIME", auth_token=auth_token)
+        anime_present_ids = set(e["media"]["id"] for e in current_anime)
+    if manga_entries:
+        current_manga = fetch_list(user_id, "MANGA", auth_token=auth_token)
+        manga_present_ids = set(e["media"]["id"] for e in current_manga)
+    to_import = []
+    already_present = []
+    for (media_type, entry) in entries:
+        mid = entry["media"]["id"]
+        if media_type == "ANIME" and mid in anime_present_ids:
+            already_present.append((media_type, entry))
+        elif media_type == "MANGA" and mid in manga_present_ids:
+            already_present.append((media_type, entry))
+        else:
+            to_import.append((media_type, entry))
+    return to_import, already_present
+
 def import_workflow():
     print_info("Let's restore your AniList from a backup JSON!")
 
@@ -230,20 +266,35 @@ def import_workflow():
     entry_type_str = ", ".join(sorted(entry_types))
     print_info(f"Detected entry types in backup: {entry_type_str}")
 
-    print_info(f"Ready to restore {len(entries)} entries to account: {viewer_info['username']}. This will add/update your AniList.")
+    print_info(f"Checking your AniList to see if any entries are already present...")
+    to_import, already_present = filter_entries_already_present(entries, auth_token)
+    print_boxed_safe(
+        f"{len(already_present)} entries are already present on your AniList account and will be skipped.",
+        "YELLOW", 60
+    )
+    print_boxed_safe(
+        f"{len(to_import)} entries will be imported.",
+        "CYAN", 60
+    )
+
+    if not to_import:
+        print_boxed_safe("All entries from your backup are already present in your AniList account. Nothing to import!", "GREEN", 60)
+        return
+
+    print_info(f"Ready to restore {len(to_import)} entries to account: {viewer_info['username']}. This will add/update your AniList.")
     if not confirm_boxed("Proceed with restore?"):
         print_error("Restore cancelled.")
         return
 
-    restored, failed, failed_entries, elapsed = import_entries(entries, auth_token)
+    restored, failed, failed_entries, elapsed = import_entries(to_import, auth_token)
 
     print_boxed_safe(f"Restore complete!", "GREEN", 60)
-    print_boxed_safe(f"Stats:\n  Total: {len(entries)}\n  Restored: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec", "CYAN", 60)
+    print_boxed_safe(f"Stats:\n  Total in backup: {len(entries)}\n  Already present: {len(already_present)}\n  Imported: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec", "CYAN", 60)
 
     spinner_progress_bar()
 
     print_boxed_safe("Verifying restored entries in AniList...", "CYAN", 60)
-    verify_result = verify_restored_entries(entries, auth_token)
+    verify_result = verify_restored_entries(to_import, auth_token)
 
     all_verified = True
     total_failed_verification = 0
@@ -281,7 +332,7 @@ def import_workflow():
                 spinner_progress_bar()
                 print_boxed_safe("Verifying entries after retry...", "CYAN", 60)
 
-                all_entries = entries + retry_entries
+                all_entries = to_import + retry_entries
                 verify_result = verify_restored_entries(all_entries, auth_token)
                 all_verified = True
                 total_failed_verification = 0
