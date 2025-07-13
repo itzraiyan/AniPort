@@ -8,7 +8,7 @@ ASCII_BANNERS = [
      > ^ <    AniList Backup & Restore
     """,
     r"""
-.d8b.  d8b   db d888888b d8888b.  .d88b.  d8888b. d888888b 
+ .d8b.  d8b   db d888888b d8888b.  .d88b.  d8888b. d888888b 
 d8' `8b 888o  88   `88'   88  `8D .8P  Y8. 88  `8D `~~88~~' 
 88ooo88 88V8o 88    88    88oodD' 88    88 88oobY'    88    
 88~~~88 88 V8o88    88    88~~~   88    88 88`8b      88    
