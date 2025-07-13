@@ -1,6 +1,4 @@
-• AniPort v1.6.0 update! Bao Bao
-- Added admin message system
-- Improved export speed
-- Fixed bug with manga lists
-
-Please run `git pull` to stay updated!
+AniPort v1.6.1
+ ├─ ⌧ UI bug fixes  
+ ├─ ✎ Added more ASCII Arts  
+ └─ ⚙ Improved speed & performance
