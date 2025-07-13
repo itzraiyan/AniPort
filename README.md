@@ -249,17 +249,27 @@ You'll see an anime-themed main menu with banners, quotes, and colorful instruct
 
 ---
 
-### Example Session (Now Annotated for Clarity)
+## ▶️ Example Session
+
+Below is a corrected example session showing a full backup and restore flow. All prompts, responses, and output reflect the actual user experience in the terminal:
 
 ```
 Welcome to your AniList Backup & Restore Tool!
-[Anime banner and quote]
-Choose an option:
+
+▄▀█ █▄░█ █ █▀█ █▀█ █▀█ ▀█▀
+█▀█ █░▀█ █ █▀▀ █▄█ █▀▄ ░█░
+
+“The world isn’t perfect. But it’s there for us, doing the best it can. That’s what makes it so damn beautiful.” – Roy Mustang
+
+What would you like to do?
   1. Export your AniList (create a backup)
   2. Import from a backup (restore your list)
   3. Learn more about this tool
   4. Exit
+(Type the number or -help for info)
 > 1
+
+You have chosen to EXPORT (backup) your AniList!
 
 Enter your AniList username (type '-help' for help)
 > MyAnimeName
@@ -269,19 +279,76 @@ Does your AniList list include private entries?
   2. Yes (private + public)
 > 2
 
-[Prompts for Client ID and Secret, shows OAuth URL, asks to paste redirect URL]
-...
+You will need AniList API credentials. Follow the prompts!
+Enter your AniList API Client ID (type '-help' for help):
+> [client_id_here]
+Enter your AniList API Client Secret (type '-help' for help):
+> [client_secret_here]
 
+To authenticate, you'll need to open a link, approve access, and copy a code.
+Step 1: Copy the URL below and open it in your browser. Log in and approve access.
+
+https://anilist.co/api/v2/oauth/authorize?client_id=...&response_type=code&redirect_uri=http%3A%2F%2Flocalhost
+
+Step 2: After approving, AniList will redirect (or fail to connect to localhost, that's OK!).
+Copy the full URL from your browser's address bar (it will contain '?code=...'), and paste it below.
+
+Paste the entire redirected URL here:
+> [redirected_url_with_code]
+
+What would you like to export?
+  1. Anime only
+  2. Manga only
+  3. Both anime and manga
+> 1
+
+Would you like to filter by status? (y/N)
+> N
+
+Would you like to filter by title substring? (y/N)
+> N
+
+Fetching anime list from AniList...
+
+Export complete! Your backup(s) are in the output/ folder.
 Export stats:
   Anime exported: 128
   Time taken: 4.2 sec
 
-[Now for import...]
-Choose backup file to restore:
-  1. MyAnimeName_anime_backup.json
+Thanks for using the AniList Backup Tool! 🌸
+Keep your anime dreams safe and keep exploring new worlds!
+
+“No matter how deep the night, it always turns to day, eventually.” – Brook
+```
+
+Now, let's restore from the backup:
+
+```
+Welcome to your AniList Backup & Restore Tool!
+
+What would you like to do?
+  1. Export your AniList (create a backup)
+  2. Import from a backup (restore your list)
+  3. Learn more about this tool
+  4. Exit
+> 2
+
+You have chosen to IMPORT (restore) a backup!
+
+Found one backup: MyAnimeName_anime_backup.json in 'output/'.
+Use this file? (Y/n)
+> Y
+
+Select which AniList account to restore to.
+Choose an AniList account for this operation:
+  1. Use saved account: MyAnimeName
+  2. Add a different AniList account
+  3. Remove a saved account
 > 1
 
 Authenticated as AniList user: MyAnimeName (ID: 12345)
+
+Detected entry types in backup: ANIME
 Ready to restore 128 entries to account: MyAnimeName. This will add/update your AniList.
 Proceed with restore? (y/N)
 > y
@@ -295,16 +362,28 @@ Stats:
   Failed: 0
   Time: 3.2 sec
 
-Waiting 20 seconds before verifying your restored AniList.
-Countdown: 20...
-Countdown: 19...
-...
-Countdown: 1...
-
 Verifying restored entries in AniList...
-Verification: 128 / 128 entries present in AniList (ANIME).
+⠋ [████████████████████████████] 100%
+
+Verification complete!
+Verification: 128 / 128 imported entries present in AniList (ANIME).
+Note:
+If you do not immediately see all your imported entries on AniList, don't worry!
+AniList sometimes requires a manual refresh for new entries to appear in your list.
+To update your list:
+  1. Go to your AniList list settings page:
+     https://anilist.co/settings/list
+  2. Click on “Update Stats” and then “Unhide Entries.”
+This will refresh your lists and make all imported entries visible.
+You can also try refreshing your browser after doing this.
+
+Verification PASSED: All imported entries are present in your AniList!
 Your AniList should now match your backup!
 ```
+
+---
+
+**This session demonstrates a typical user flow for both backup and restore, including authentication, file selection, and verification. All prompts and messages are true to the actual AniPort experience.**
 
 ---
 
