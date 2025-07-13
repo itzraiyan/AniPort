@@ -1,4 +1,4 @@
 AniPort v1.6.1
- ├─ ⌧ UI bug fixes  
+ ├─ ✖ UI bug fixes  
  ├─ ✎ Added more ASCII Arts  
  └─ ⚙ Improved speed & performance
