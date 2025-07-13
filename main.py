@@ -5,7 +5,6 @@ AniList Backup Tool - Main CLI Entrypoint
 Handles session start, banner and intro, main menu, and routes to export/import/info flows.
 All UX is decorated and anime-themed, as per the project style guide.
 
-Author: AniXWeebs
 """
 
 import sys
