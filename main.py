@@ -4,7 +4,6 @@ AniList Backup Tool - Main CLI Entrypoint
 
 Handles session start, banner and intro, main menu, and routes to export/import/info flows.
 All UX is decorated and anime-themed, as per the project style guide.
-
 """
 
 import sys
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         # Improved boxed message for Ctrl+C
         from ui.colors import boxed_text
-        msg = boxed_text("Interrupted by user. Goodbye! 🐾", "RED", 60)
+        msg = boxed_text("Interrupted by user. Goodbye!", "RED", 60)
         print(msg)
         sys.exit(0)
     except Exception as e:
