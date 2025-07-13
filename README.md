@@ -10,7 +10,7 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 
 ---
 
-## ✨ Features (Now in Full Detail!)
+## ✨ Features 
 
 * 🖼️ **Anime-themed terminal interface**
   - Random ASCII art banners appear on launch for an immersive experience.
