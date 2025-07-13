@@ -1,5 +1,5 @@
 AniPort v1.6.3
-	├─ Minor changes
+ ├─ Minor changes
  ├─ ✖ UI bug fixes  
  ├─ ✎ Added more ASCII Arts  
  └─ ⚙ Improved speed & performance
