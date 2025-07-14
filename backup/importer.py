@@ -22,7 +22,10 @@ from ui.prompts import (
     confirm_boxed, menu_boxed, print_progress_bar, print_warning
 )
 from ui.colors import boxed_text, print_boxed_safe
-from backup.output import load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup
+from backup.output import (
+    load_json_backup, validate_backup_json, OUTPUT_DIR, save_json_backup,
+    get_leftout_restore_path
+)
 from anilist.auth import choose_account_flow
 from anilist.api import restore_entry, get_viewer_info, fetch_list
 from ui.helptext import IMPORT_FILE_HELP
@@ -126,22 +129,6 @@ def verify_restored_entries(entries, auth_token):
         result[media_type] = (present, total)
     return result
 
-def import_entries(entries, auth_token):
-    restored = 0
-    failed = 0
-    failed_entries = []
-    start = time.time()
-    from tqdm import tqdm
-    for (media_type, entry) in tqdm(entries, desc="Restoring", unit="item"):
-        ok = restore_entry(entry, media_type, auth_token)
-        if ok:
-            restored += 1
-        else:
-            failed += 1
-            failed_entries.append({"media_type": media_type, "entry": entry})
-    elapsed = time.time() - start
-    return restored, failed, failed_entries, elapsed
-
 def save_failed_entries(failed_entries, backup_data, failed_path):
     if isinstance(backup_data, dict) and ("anime" in backup_data or "manga" in backup_data):
         failed_dict = {"anime": [], "manga": []}
@@ -149,11 +136,26 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
             mt = item["media_type"].lower()
             if mt in failed_dict:
                 failed_dict[mt].append(item["entry"])
-        save_json_backup(failed_dict, failed_path)
+        save_json_backup(failed_dict, failed_path, overwrite=True)
     else:
         failed_list = [item["entry"] for item in failed_entries]
-        save_json_backup(failed_list, failed_path)
+        save_json_backup(failed_list, failed_path, overwrite=True)
     print_error(f"Failed entries saved to: {failed_path}")
+    print_info("You can retry importing this file later.")
+
+def save_leftout_entries(leftout_entries, backup_data, leftout_path):
+    # Always overwrite leftout.json, never stack/rename
+    if isinstance(backup_data, dict) and ("anime" in backup_data or "manga" in backup_data):
+        leftout_dict = {"anime": [], "manga": []}
+        for item in leftout_entries:
+            mt = item[0].lower()
+            if mt in leftout_dict:
+                leftout_dict[mt].append(item[1])
+        save_json_backup(leftout_dict, leftout_path, overwrite=True)
+    else:
+        leftout_list = [e[1] for e in leftout_entries]
+        save_json_backup(leftout_list, leftout_path, overwrite=True)
+    print_error(f"Unimported entries saved to: {leftout_path}")
     print_info("You can retry importing this file later.")
 
 def spinner_progress_bar(task_message="Verifying restored entries in AniList...", seconds=15):
@@ -281,18 +283,103 @@ def import_workflow():
         print_boxed_safe("All entries from your backup are already present in your AniList account. Nothing to import!", "GREEN", 60)
         return
 
+    # --- Pre-import ETA ---
+    entries_count = len(to_import)
+    rate_limit_every = 35
+    rate_limit_pause = 60  # seconds
+    avg_time_per_entry = 0.5  # simple guess; can be tuned
+
+    n_limits = entries_count // rate_limit_every
+    base_time = entries_count * avg_time_per_entry
+    estimated_time = int(base_time + n_limits * rate_limit_pause)
+    mins, secs = divmod(estimated_time, 60)
+    eta_str = f"{mins:02d}:{secs:02d}"
+    print_boxed_safe(
+        "AniList has API rate limits, importing might take a while. You can do other stuff in the meantime.",
+        "YELLOW", 60
+    )
+    print_boxed_safe(
+        f"Estimated Time: ~{eta_str} for {entries_count} entries",
+        "CYAN", 60
+    )
+
     print_info(f"Ready to restore {len(to_import)} entries to account: {viewer_info['username']}. This will add/update your AniList.")
     if not confirm_boxed("Proceed with restore?"):
         print_error("Restore cancelled.")
         return
 
-    restored, failed, failed_entries, elapsed = import_entries(to_import, auth_token)
+    # --- Import with dynamic ETA and clean progress bar ---
+    restored = 0
+    failed = 0
+    failed_entries = []
+    start = time.time()
+    import tqdm
 
+    rate_limit_hits = 0
+    entries_since_last_rl = 0
+    last_rl_time = start
+    total_entries = len(to_import)
+
+    # Custom tqdm bar format as requested
+    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}entries/s]"
+
+    def get_eta(entries_done, rate_limit_hits, elapsed):
+        entries_left = total_entries - entries_done
+        # Before first rate limit, use avg_time_per_entry
+        if rate_limit_hits == 0:
+            est = entries_left * avg_time_per_entry
+        else:
+            # After each rate limit, use live rate
+            est_per_entry = elapsed / max(entries_done, 1)
+            est = entries_left * est_per_entry
+        # Add future rate limits
+        future_limits = entries_left // rate_limit_every
+        est += future_limits * rate_limit_pause
+        return int(est)
+
+    try:
+        progress_bar = tqdm.tqdm(
+            to_import,
+            desc="Restoring",
+            unit="entries",
+            dynamic_ncols=True,
+            bar_format=bar_format
+        )
+        for idx, (media_type, entry) in enumerate(progress_bar):
+            ok = restore_entry(entry, media_type, auth_token)
+            if ok:
+                restored += 1
+            else:
+                failed += 1
+                failed_entries.append({"media_type": media_type, "entry": entry})
+
+            entries_since_last_rl += 1
+            elapsed = time.time() - start
+            eta = get_eta(idx + 1, rate_limit_hits, elapsed)
+            mins, secs = divmod(eta, 60)
+            # No need to set_postfix_str; bar_format shows elapsed and ETA.
+
+            if entries_since_last_rl >= rate_limit_every:
+                rate_limit_hits += 1
+                entries_since_last_rl = 0
+                last_rl_time = time.time()
+        # progress_bar.set_postfix_str(f"ETA: ~00:00")  # Not needed
+    except KeyboardInterrupt:
+        # Save leftout.json with unimported entries
+        leftout_entries = to_import[idx+1:] if 'idx' in locals() else to_import
+        leftout_path = get_leftout_restore_path(filepath)
+        save_leftout_entries(leftout_entries, backup_data, leftout_path)
+        print_boxed_safe("Import interrupted! Unimported entries saved for resume.", "RED", 60)
+        return
+
+    elapsed = time.time() - start
     print_boxed_safe(f"Restore complete!", "GREEN", 60)
     print_boxed_safe(f"Stats:\n  Total in backup: {len(entries)}\n  Already present: {len(already_present)}\n  Imported: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec", "CYAN", 60)
 
+    # --- Only one verification bar ---
     spinner_progress_bar()
 
+    # Run verification in background during spinner (already done above)
     print_boxed_safe("Verifying restored entries in AniList...", "CYAN", 60)
     verify_result = verify_restored_entries(to_import, auth_token)
 
@@ -326,7 +413,35 @@ def import_workflow():
                 print_boxed_safe("No entries in failed backup to retry.", "RED", 60)
             else:
                 print_boxed_safe(f"Retrying {len(retry_entries)} failed entries...", "CYAN", 60)
-                r_restored, r_failed, r_failed_entries, r_elapsed = import_entries(retry_entries, auth_token)
+                r_restored = 0
+                r_failed = 0
+                r_failed_entries = []
+                r_start = time.time()
+                r_total = len(retry_entries)
+                r_progress_bar = tqdm.tqdm(
+                    retry_entries,
+                    desc="Restoring (Retry)",
+                    unit="entries",
+                    dynamic_ncols=True,
+                    bar_format=bar_format
+                )
+                try:
+                    for idx2, (media_type, entry) in enumerate(r_progress_bar):
+                        ok = restore_entry(entry, media_type, auth_token)
+                        if ok:
+                            r_restored += 1
+                        else:
+                            r_failed += 1
+                            r_failed_entries.append({"media_type": media_type, "entry": entry})
+                        # ETA logic can be reused if desired, but tqdm's bar_format handles it.
+                    # r_progress_bar.set_postfix_str(f"ETA: ~00:00")
+                except KeyboardInterrupt:
+                    leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
+                    leftout_path2 = get_leftout_restore_path(failed_path)
+                    save_leftout_entries(leftout_entries2, failed_data, leftout_path2)
+                    print_boxed_safe("Import interrupted during retry! Unimported entries saved for resume.", "RED", 60)
+                    return
+                r_elapsed = time.time() - r_start
                 print_boxed_safe("Retry restore complete!", "GREEN", 60)
                 print_boxed_safe(f"Stats:\n  Total retried: {len(retry_entries)}\n  Restored: {r_restored}\n  Failed: {r_failed}\n  Time: {r_elapsed:.1f} sec", "CYAN", 60)
                 spinner_progress_bar()
