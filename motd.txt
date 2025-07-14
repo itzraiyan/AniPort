@@ -1,4 +1,4 @@
-AniPort v1.6.3
+AniPort v1.6.0
  ├─ Minor changes
  ├─ ✖ UI bug fixes  
  ├─ ✎ Added more ASCII Arts  
