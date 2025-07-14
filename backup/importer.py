@@ -194,10 +194,6 @@ def print_post_verification_note():
     print_boxed_safe(note, "CYAN", 60)
 
 def filter_entries_already_present(entries, auth_token):
-    """
-    Given entries [(media_type, entry)], returns (to_import, already_present).
-    already_present contains entries found in user's list by media ID.
-    """
     viewer_info = get_viewer_info(auth_token)
     user_id = viewer_info["id"]
     # Fetch current anime/manga entries
@@ -287,7 +283,7 @@ def import_workflow():
     entries_count = len(to_import)
     rate_limit_every = 35
     rate_limit_pause = 60  # seconds
-    avg_time_per_entry = 0.5  # simple guess; can be tuned
+    avg_time_per_entry = 0.5  # initial guess
 
     n_limits = entries_count // rate_limit_every
     base_time = entries_count * avg_time_per_entry
@@ -316,34 +312,30 @@ def import_workflow():
     import tqdm
 
     rate_limit_hits = 0
+    rate_limit_total_wait = 0.0
     entries_since_last_rl = 0
     last_rl_time = start
     total_entries = len(to_import)
 
-    # Clean tqdm bar format, no unit duplication, filename-aware leftout naming
-    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+    # Clean tqdm bar format, show entries/s, ETA
+    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] ETA: {postfix[ETA]}"
 
-    def get_eta(entries_done, rate_limit_hits, elapsed):
-        entries_left = total_entries - entries_done
-        if rate_limit_hits == 0:
-            est = entries_left * avg_time_per_entry
-        else:
-            est_per_entry = elapsed / max(entries_done, 1)
-            est = entries_left * est_per_entry
-        future_limits = entries_left // rate_limit_every
-        est += future_limits * rate_limit_pause
-        return int(est)
+    # For ETA calculation
+    rate_limit_hit_indexes = []
+    rate_limit_hit_times = []
 
     try:
         progress_bar = tqdm.tqdm(
             to_import,
             desc="Restoring",
-            unit="",
+            unit="entries",
             dynamic_ncols=True,
             bar_format=bar_format
         )
         for idx, (media_type, entry) in enumerate(progress_bar):
+            tick_start = time.time()
             ok = restore_entry(entry, media_type, auth_token)
+            tick_elapsed = time.time() - tick_start
             if ok:
                 restored += 1
             else:
@@ -351,16 +343,42 @@ def import_workflow():
                 failed_entries.append({"media_type": media_type, "entry": entry})
 
             entries_since_last_rl += 1
+
+            # If a rate limit hit happened, update tracking info
+            # We can detect a rate limit hit by measuring long tick_elapsed
+            # (Or, if you have a global from ratelimit.py, use that)
+            if tick_elapsed > 15:  # Any tick taking longer than 15s is probably a rate limit pause
+                rate_limit_hits += 1
+                rate_limit_hit_indexes.append(idx + 1)
+                rate_limit_hit_times.append(tick_elapsed)
+                rate_limit_total_wait += tick_elapsed
+
+            entries_done = idx + 1
+            entries_left = total_entries - entries_done
             elapsed = time.time() - start
-            eta = get_eta(idx + 1, rate_limit_hits, elapsed)
-            # tqdm handles elapsed/eta/rate_fmt display
+
+            # Calculate real average entry time (excluding rate limit waits)
+            true_entry_time = (
+                (elapsed - rate_limit_total_wait) / entries_done
+                if entries_done > 0 else avg_time_per_entry
+            )
+            # Estimate future rate limits
+            next_rate_limit_in = rate_limit_every - (entries_done % rate_limit_every)
+            remaining_limits = entries_left // rate_limit_every
+            # Estimate future rate limit pauses: use average from past
+            avg_rl_pause = (sum(rate_limit_hit_times)/rate_limit_hits) if rate_limit_hits > 0 else rate_limit_pause
+            future_rl_pause = remaining_limits * avg_rl_pause
+
+            # Dynamic ETA with observed stats
+            eta = entries_left * true_entry_time + future_rl_pause
+            mins_eta, secs_eta = divmod(int(eta), 60)
+
+            progress_bar.set_postfix({"ETA": f"{mins_eta:02d}:{secs_eta:02d}"})
 
             if entries_since_last_rl >= rate_limit_every:
-                rate_limit_hits += 1
                 entries_since_last_rl = 0
-                last_rl_time = time.time()
+
     except KeyboardInterrupt:
-        # Save leftout file with original backup name prefix
         leftout_entries = to_import[idx+1:] if 'idx' in locals() else to_import
         leftout_path = get_leftout_restore_path(filepath)
         save_leftout_entries(leftout_entries, backup_data, leftout_path)
@@ -414,18 +432,21 @@ def import_workflow():
                 r_progress_bar = tqdm.tqdm(
                     retry_entries,
                     desc="Restoring (Retry)",
-                    unit="",
+                    unit="entries",
                     dynamic_ncols=True,
                     bar_format=bar_format
                 )
                 try:
                     for idx2, (media_type, entry) in enumerate(r_progress_bar):
+                        tick_start2 = time.time()
                         ok = restore_entry(entry, media_type, auth_token)
+                        tick_elapsed2 = time.time() - tick_start2
                         if ok:
                             r_restored += 1
                         else:
                             r_failed += 1
                             r_failed_entries.append({"media_type": media_type, "entry": entry})
+                        # ETA update (reuse logic above if desired)
                     # tqdm handles ETA display
                 except KeyboardInterrupt:
                     leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
