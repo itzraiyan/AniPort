@@ -144,7 +144,7 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
     print_info("You can retry importing this file later.")
 
 def save_leftout_entries(leftout_entries, backup_data, leftout_path):
-    # Always overwrite leftout.json, never stack/rename
+    # Always overwrite leftout file, never stack/rename
     if isinstance(backup_data, dict) and ("anime" in backup_data or "manga" in backup_data):
         leftout_dict = {"anime": [], "manga": []}
         for item in leftout_entries:
@@ -320,19 +320,16 @@ def import_workflow():
     last_rl_time = start
     total_entries = len(to_import)
 
-    # Custom tqdm bar format as requested
-    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}entries/s]"
+    # Clean tqdm bar format, no unit duplication, filename-aware leftout naming
+    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
 
     def get_eta(entries_done, rate_limit_hits, elapsed):
         entries_left = total_entries - entries_done
-        # Before first rate limit, use avg_time_per_entry
         if rate_limit_hits == 0:
             est = entries_left * avg_time_per_entry
         else:
-            # After each rate limit, use live rate
             est_per_entry = elapsed / max(entries_done, 1)
             est = entries_left * est_per_entry
-        # Add future rate limits
         future_limits = entries_left // rate_limit_every
         est += future_limits * rate_limit_pause
         return int(est)
@@ -341,7 +338,7 @@ def import_workflow():
         progress_bar = tqdm.tqdm(
             to_import,
             desc="Restoring",
-            unit="entries",
+            unit="",
             dynamic_ncols=True,
             bar_format=bar_format
         )
@@ -356,16 +353,14 @@ def import_workflow():
             entries_since_last_rl += 1
             elapsed = time.time() - start
             eta = get_eta(idx + 1, rate_limit_hits, elapsed)
-            mins, secs = divmod(eta, 60)
-            # No need to set_postfix_str; bar_format shows elapsed and ETA.
+            # tqdm handles elapsed/eta/rate_fmt display
 
             if entries_since_last_rl >= rate_limit_every:
                 rate_limit_hits += 1
                 entries_since_last_rl = 0
                 last_rl_time = time.time()
-        # progress_bar.set_postfix_str(f"ETA: ~00:00")  # Not needed
     except KeyboardInterrupt:
-        # Save leftout.json with unimported entries
+        # Save leftout file with original backup name prefix
         leftout_entries = to_import[idx+1:] if 'idx' in locals() else to_import
         leftout_path = get_leftout_restore_path(filepath)
         save_leftout_entries(leftout_entries, backup_data, leftout_path)
@@ -376,10 +371,8 @@ def import_workflow():
     print_boxed_safe(f"Restore complete!", "GREEN", 60)
     print_boxed_safe(f"Stats:\n  Total in backup: {len(entries)}\n  Already present: {len(already_present)}\n  Imported: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec", "CYAN", 60)
 
-    # --- Only one verification bar ---
     spinner_progress_bar()
 
-    # Run verification in background during spinner (already done above)
     print_boxed_safe("Verifying restored entries in AniList...", "CYAN", 60)
     verify_result = verify_restored_entries(to_import, auth_token)
 
@@ -421,7 +414,7 @@ def import_workflow():
                 r_progress_bar = tqdm.tqdm(
                     retry_entries,
                     desc="Restoring (Retry)",
-                    unit="entries",
+                    unit="",
                     dynamic_ncols=True,
                     bar_format=bar_format
                 )
@@ -433,8 +426,7 @@ def import_workflow():
                         else:
                             r_failed += 1
                             r_failed_entries.append({"media_type": media_type, "entry": entry})
-                        # ETA logic can be reused if desired, but tqdm's bar_format handles it.
-                    # r_progress_bar.set_postfix_str(f"ETA: ~00:00")
+                    # tqdm handles ETA display
                 except KeyboardInterrupt:
                     leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
                     leftout_path2 = get_leftout_restore_path(failed_path)
