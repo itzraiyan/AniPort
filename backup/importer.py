@@ -314,14 +314,12 @@ def import_workflow():
     rate_limit_hits = 0
     rate_limit_total_wait = 0.0
     entries_since_last_rl = 0
-    last_rl_time = start
     total_entries = len(to_import)
 
     # Custom tqdm bar format: "Restoring:  26%|█▌              | 38/146 [ETA=04:20,  1.01entries/s]"
-    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA={postfix[ETA]},  {rate_fmt}]"
+    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA={postfix},  {rate_fmt}]"
 
     # For ETA calculation
-    rate_limit_hit_indexes = []
     rate_limit_hit_times = []
 
     try:
@@ -343,11 +341,9 @@ def import_workflow():
                 failed_entries.append({"media_type": media_type, "entry": entry})
 
             entries_since_last_rl += 1
-
             # If a rate limit hit happened, update tracking info
             if tick_elapsed > 15:  # Any tick taking longer than 15s is probably a rate limit pause
                 rate_limit_hits += 1
-                rate_limit_hit_indexes.append(idx + 1)
                 rate_limit_hit_times.append(tick_elapsed)
                 rate_limit_total_wait += tick_elapsed
 
@@ -370,8 +366,8 @@ def import_workflow():
             mins_eta, secs_eta = divmod(int(eta), 60)
             eta_str_dynamic = f"{mins_eta:02d}:{secs_eta:02d}"
 
-            # Custom postfix with ETA only
-            progress_bar.set_postfix({"ETA": eta_str_dynamic})
+            # Show ETA only (no [ETA: ...] prefix)
+            progress_bar.set_postfix_str(eta_str_dynamic)
 
             if entries_since_last_rl >= rate_limit_every:
                 entries_since_last_rl = 0
@@ -427,6 +423,9 @@ def import_workflow():
                 r_failed_entries = []
                 r_start = time.time()
                 r_total = len(retry_entries)
+                r_rate_limit_hits = 0
+                r_rate_limit_total_wait = 0.0
+                r_rate_limit_hit_times = []
                 r_progress_bar = tqdm.tqdm(
                     retry_entries,
                     desc="Restoring (Retry)",
@@ -444,20 +443,24 @@ def import_workflow():
                         else:
                             r_failed += 1
                             r_failed_entries.append({"media_type": media_type, "entry": entry})
+                        # Retry ETA logic
+                        if tick_elapsed2 > 15:
+                            r_rate_limit_hits += 1
+                            r_rate_limit_hit_times.append(tick_elapsed2)
+                            r_rate_limit_total_wait += tick_elapsed2
                         entries_done2 = idx2 + 1
                         entries_left2 = r_total - entries_done2
                         elapsed2 = time.time() - r_start
                         true_entry_time2 = (
-                            (elapsed2 - rate_limit_total_wait) / entries_done2
+                            (elapsed2 - r_rate_limit_total_wait) / entries_done2
                             if entries_done2 > 0 else avg_time_per_entry
                         )
                         remaining_limits2 = entries_left2 // rate_limit_every
-                        avg_rl_pause2 = (sum(rate_limit_hit_times)/rate_limit_hits) if rate_limit_hits > 0 else rate_limit_pause
+                        avg_rl_pause2 = (sum(r_rate_limit_hit_times)/r_rate_limit_hits) if r_rate_limit_hits > 0 else rate_limit_pause
                         future_rl_pause2 = remaining_limits2 * avg_rl_pause2
                         eta2 = entries_left2 * true_entry_time2 + future_rl_pause2
                         mins_eta2, secs_eta2 = divmod(int(eta2), 60)
-                        eta_str_dynamic2 = f"{mins_eta2:02d}:{secs_eta2:02d}"
-                        r_progress_bar.set_postfix({"ETA": eta_str_dynamic2})
+                        r_progress_bar.set_postfix_str(f"{mins_eta2:02d}:{secs_eta2:02d}")
                 except KeyboardInterrupt:
                     leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
                     leftout_path2 = get_leftout_restore_path(failed_path)
