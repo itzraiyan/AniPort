@@ -317,7 +317,7 @@ def import_workflow():
     total_entries = len(to_import)
 
     # Desired tqdm bar: "Restoring:  26%|█▌              | 38/146 [ETA:04:20,  1.01entries/s]"
-    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA:{postfix},  {rate_fmt}]"
+    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA:{postfix} {rate_fmt}]"
 
     # For ETA calculation
     rate_limit_hit_times = []
