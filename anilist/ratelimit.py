@@ -37,12 +37,12 @@ def handle_rate_limit(resp):
     def spinner_wait(wait, hit_number):
         spinner = ['|', '/', '-', '\\']
         msg = f"Waiting... {wait} seconds [Rate limit hit #{hit_number}] (press Ctrl+C to cancel)"
-        info(msg, color="RED")
+        info(msg, color="YELLOW")
         start = time.time()
         frame = 0
         try:
             while time.time() - start < wait:
-                sys.stdout.write(color_text('\r' + f"[{spinner[frame % len(spinner)]}] Waiting...", "RED"))
+                sys.stdout.write(color_text('\r' + f"[{spinner[frame % len(spinner)]}] Waiting...", "YELLOW"))
                 sys.stdout.flush()
                 time.sleep(0.12)
                 frame += 1
@@ -52,7 +52,7 @@ def handle_rate_limit(resp):
         except KeyboardInterrupt:
             sys.stdout.write('\n')
             sys.stdout.flush()
-            info("Interrupted during rate limit wait. Exiting...", color="YELLOW")
+            info("Interrupted during rate limit wait. Exiting...", color="RED")
             raise
 
     # AniList returns 429 for rate limit
