@@ -304,7 +304,7 @@ def import_workflow():
         print_error("Restore cancelled.")
         return
 
-    # --- Import with dynamic ETA and clean progress bar ---
+    # --- Import with dynamic ETA and custom progress bar ---
     restored = 0
     failed = 0
     failed_entries = []
@@ -317,8 +317,8 @@ def import_workflow():
     last_rl_time = start
     total_entries = len(to_import)
 
-    # Clean tqdm bar format, show entries/s, ETA
-    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}"
+    # Custom tqdm bar format: "Restoring:  26%|█▌              | 38/146 [ETA=04:20,  1.01entries/s]"
+    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA={postfix[ETA]},  {rate_fmt}]"
 
     # For ETA calculation
     rate_limit_hit_indexes = []
@@ -345,8 +345,6 @@ def import_workflow():
             entries_since_last_rl += 1
 
             # If a rate limit hit happened, update tracking info
-            # We can detect a rate limit hit by measuring long tick_elapsed
-            # (Or, if you have a global from ratelimit.py, use that)
             if tick_elapsed > 15:  # Any tick taking longer than 15s is probably a rate limit pause
                 rate_limit_hits += 1
                 rate_limit_hit_indexes.append(idx + 1)
@@ -363,17 +361,17 @@ def import_workflow():
                 if entries_done > 0 else avg_time_per_entry
             )
             # Estimate future rate limits
-            next_rate_limit_in = rate_limit_every - (entries_done % rate_limit_every)
             remaining_limits = entries_left // rate_limit_every
-            # Estimate future rate limit pauses: use average from past
             avg_rl_pause = (sum(rate_limit_hit_times)/rate_limit_hits) if rate_limit_hits > 0 else rate_limit_pause
             future_rl_pause = remaining_limits * avg_rl_pause
 
             # Dynamic ETA with observed stats
             eta = entries_left * true_entry_time + future_rl_pause
             mins_eta, secs_eta = divmod(int(eta), 60)
+            eta_str_dynamic = f"{mins_eta:02d}:{secs_eta:02d}"
 
-            progress_bar.set_postfix({"ETA": f"{mins_eta:02d}:{secs_eta:02d}"})
+            # Custom postfix with ETA only
+            progress_bar.set_postfix({"ETA": eta_str_dynamic})
 
             if entries_since_last_rl >= rate_limit_every:
                 entries_since_last_rl = 0
@@ -446,7 +444,6 @@ def import_workflow():
                         else:
                             r_failed += 1
                             r_failed_entries.append({"media_type": media_type, "entry": entry})
-                        # ETA update (reuse logic above if desired)
                         entries_done2 = idx2 + 1
                         entries_left2 = r_total - entries_done2
                         elapsed2 = time.time() - r_start
@@ -454,14 +451,13 @@ def import_workflow():
                             (elapsed2 - rate_limit_total_wait) / entries_done2
                             if entries_done2 > 0 else avg_time_per_entry
                         )
-                        next_rate_limit_in2 = rate_limit_every - (entries_done2 % rate_limit_every)
                         remaining_limits2 = entries_left2 // rate_limit_every
                         avg_rl_pause2 = (sum(rate_limit_hit_times)/rate_limit_hits) if rate_limit_hits > 0 else rate_limit_pause
                         future_rl_pause2 = remaining_limits2 * avg_rl_pause2
                         eta2 = entries_left2 * true_entry_time2 + future_rl_pause2
                         mins_eta2, secs_eta2 = divmod(int(eta2), 60)
-                        r_progress_bar.set_postfix({"ETA": f"{mins_eta2:02d}:{secs_eta2:02d}"})
-                    # tqdm handles ETA display
+                        eta_str_dynamic2 = f"{mins_eta2:02d}:{secs_eta2:02d}"
+                        r_progress_bar.set_postfix({"ETA": eta_str_dynamic2})
                 except KeyboardInterrupt:
                     leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
                     leftout_path2 = get_leftout_restore_path(failed_path)
