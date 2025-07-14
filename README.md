@@ -32,7 +32,7 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 
 ---
 
-## 📦 Installation & Quickstart (Now Even More Step-by-Step!)
+## 📦 Installation & Quickstart (Now Even More Step-by-Step & Non-Interactive!)
 
 ### 🟩 Android (Termux) – **Recommended for Mobile Users**
 
@@ -42,9 +42,9 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 2. **Set up Termux:**
 
    ```sh
-   pkg update
-   pkg upgrade
-   pkg install python git
+   pkg update -y
+   pkg upgrade -y
+   pkg install -y python git
    ```
 
 3. **Get AniPort:**
@@ -60,8 +60,8 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
    **Important:** You must install all dependencies, including `rich` for optimal color support!
 
    ```sh
-   pip install -r requirements.txt
-   pip install rich
+   pip install --upgrade pip
+   pip install -r requirements.txt rich
    ```
 
 5. **Run AniPort:**
@@ -74,11 +74,12 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 
 ### 🟦 Linux (Ubuntu/Debian/Fedora/Arch...)
 
-1. **Install Python and Git:**
+1. **Install Python and Git:**  
+   (No prompts—these commands will run without asking for confirmation.)
 
    ```sh
-   sudo apt update
-   sudo apt install python3 python3-pip git
+   sudo apt update -y
+   sudo apt install -y python3 python3-pip git
    ```
 
 2. **Clone and enter the repository:**
@@ -91,8 +92,8 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 3. **Install dependencies (including `rich`):**
 
    ```sh
-   pip3 install -r requirements.txt
-   pip3 install rich
+   pip3 install --upgrade pip
+   pip3 install -r requirements.txt rich
    ```
 
 4. **Run AniPort:**
@@ -120,8 +121,8 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 4. **Install dependencies (including `rich`):**
 
    ```bat
-   pip install -r requirements.txt
-   pip install rich
+   pip install --upgrade pip
+   pip install -r requirements.txt rich
    ```
 
 5. **Run AniPort:**
