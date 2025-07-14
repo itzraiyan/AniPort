@@ -330,6 +330,7 @@ def import_workflow():
             dynamic_ncols=True,
             bar_format=bar_format
         )
+        progress_bar.set_postfix_str("00:00")  # Set initial ETA so no stray comma
         for idx, (media_type, entry) in enumerate(progress_bar):
             tick_start = time.time()
             ok = restore_entry(entry, media_type, auth_token)
@@ -433,6 +434,7 @@ def import_workflow():
                     dynamic_ncols=True,
                     bar_format=bar_format
                 )
+                r_progress_bar.set_postfix_str("00:00")
                 try:
                     for idx2, (media_type, entry) in enumerate(r_progress_bar):
                         tick_start2 = time.time()
