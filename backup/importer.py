@@ -318,7 +318,7 @@ def import_workflow():
     total_entries = len(to_import)
 
     # Clean tqdm bar format, show entries/s, ETA
-    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] ETA: {postfix[ETA]}"
+    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}"
 
     # For ETA calculation
     rate_limit_hit_indexes = []
@@ -447,6 +447,20 @@ def import_workflow():
                             r_failed += 1
                             r_failed_entries.append({"media_type": media_type, "entry": entry})
                         # ETA update (reuse logic above if desired)
+                        entries_done2 = idx2 + 1
+                        entries_left2 = r_total - entries_done2
+                        elapsed2 = time.time() - r_start
+                        true_entry_time2 = (
+                            (elapsed2 - rate_limit_total_wait) / entries_done2
+                            if entries_done2 > 0 else avg_time_per_entry
+                        )
+                        next_rate_limit_in2 = rate_limit_every - (entries_done2 % rate_limit_every)
+                        remaining_limits2 = entries_left2 // rate_limit_every
+                        avg_rl_pause2 = (sum(rate_limit_hit_times)/rate_limit_hits) if rate_limit_hits > 0 else rate_limit_pause
+                        future_rl_pause2 = remaining_limits2 * avg_rl_pause2
+                        eta2 = entries_left2 * true_entry_time2 + future_rl_pause2
+                        mins_eta2, secs_eta2 = divmod(int(eta2), 60)
+                        r_progress_bar.set_postfix({"ETA": f"{mins_eta2:02d}:{secs_eta2:02d}"})
                     # tqdm handles ETA display
                 except KeyboardInterrupt:
                     leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
