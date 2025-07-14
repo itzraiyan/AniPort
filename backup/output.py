@@ -58,6 +58,6 @@ def validate_backup_json(data):
 
 def get_leftout_restore_path(orig_path):
     dirname, filename = os.path.split(orig_path)
-    # Always name and overwrite leftout.json, never stack
-    leftout_name = "leftout.json"
+    base, ext = os.path.splitext(filename)
+    leftout_name = f"{base}.leftout{ext}"
     return os.path.join(dirname or ".", leftout_name)
