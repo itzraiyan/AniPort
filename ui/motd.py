@@ -11,7 +11,17 @@ except ImportError:
 
 REMOTE_MOTD_URL = "https://raw.githubusercontent.com/itzraiyan/AniPort/main/motd.txt"
 MOTD_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "motd.txt")
-STATE_FILE = os.path.expanduser("~/.aniport_seen_motd.json")
+
+def get_state_file_path():
+    # Save in ~/AniPort/.aniport_seen_motd.json (not in root)
+    home = os.path.expanduser("~")
+    aniport_dir = os.path.join(home, "AniPort")
+    if not os.path.exists(aniport_dir):
+        try:
+            os.makedirs(aniport_dir, exist_ok=True)
+        except Exception:
+            pass
+    return os.path.join(aniport_dir, ".aniport_seen_motd.json")
 
 def get_motd_message():
     if not os.path.isfile(MOTD_FILE):
@@ -26,18 +36,20 @@ def get_motd_hash(msg):
     return hashlib.sha256(msg.encode("utf-8")).hexdigest()
 
 def has_seen_motd(msg_hash):
-    if not os.path.isfile(STATE_FILE):
+    state_file = get_state_file_path()
+    if not os.path.isfile(state_file):
         return False
     try:
-        with open(STATE_FILE, "r") as f:
+        with open(state_file, "r") as f:
             state = json.load(f)
         return state.get("motd_hash") == msg_hash
     except Exception:
         return False
 
 def record_seen_motd(msg_hash):
+    state_file = get_state_file_path()
     try:
-        with open(STATE_FILE, "w") as f:
+        with open(state_file, "w") as f:
             json.dump({"motd_hash": msg_hash}, f)
     except Exception:
         pass
