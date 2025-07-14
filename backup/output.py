@@ -59,5 +59,8 @@ def validate_backup_json(data):
 def get_leftout_restore_path(orig_path):
     dirname, filename = os.path.split(orig_path)
     base, ext = os.path.splitext(filename)
+    # Remove all trailing ".leftout"
+    while base.endswith(".leftout"):
+        base = base[:-len(".leftout")]
     leftout_name = f"{base}.leftout{ext}"
     return os.path.join(dirname or ".", leftout_name)
