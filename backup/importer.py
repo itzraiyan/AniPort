@@ -316,8 +316,8 @@ def import_workflow():
     entries_since_last_rl = 0
     total_entries = len(to_import)
 
-    # Custom tqdm bar format: "Restoring:  26%|█▌              | 38/146 [ETA=04:20,  1.01entries/s]"
-    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA{postfix} {rate_fmt}]"
+    # Desired tqdm bar: "Restoring:  26%|█▌              | 38/146 [ETA:04:20,  1.01entries/s]"
+    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA:{postfix},  {rate_fmt}]"
 
     # For ETA calculation
     rate_limit_hit_times = []
@@ -366,7 +366,7 @@ def import_workflow():
             mins_eta, secs_eta = divmod(int(eta), 60)
             eta_str_dynamic = f"{mins_eta:02d}:{secs_eta:02d}"
 
-            # Show ETA only (no [ETA: ...] prefix)
+            # Show ETA as [ETA:04:20,  1.01entries/s]
             progress_bar.set_postfix_str(eta_str_dynamic)
 
             if entries_since_last_rl >= rate_limit_every:
