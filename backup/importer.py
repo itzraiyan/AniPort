@@ -399,9 +399,10 @@ def import_workflow():
     print_boxed_safe(f"Restore complete!", "GREEN", 60)
     print_boxed_safe(f"Stats:\n  Total in backup: {len(entries)}\n  Already present: {len(already_present)}\n  Imported: {restored}\n  Failed: {failed}\n  Time: {elapsed:.1f} sec", "CYAN", 60)
 
-    spinner_progress_bar()
+    # Show verification message ONCE before spinner
+    spinner_progress_bar(task_message="Verifying restored entries in AniList...")
 
-    print_boxed_safe("Verifying restored entries in AniList...", "CYAN", 60)
+    # After spinner, show verification complete and results
     verify_result = verify_restored_entries(to_import, auth_token)
 
     all_verified = True
@@ -468,9 +469,10 @@ def import_workflow():
                 print_boxed_safe("Retry restore complete!", "GREEN", 60)
                 print_boxed_safe(f"Stats:\n  Total retried: {len(retry_entries)}\n  Restored: {r_restored}\n  Failed: {r_failed}\n  Time: {r_elapsed:.1f} sec", "CYAN", 60)
                 
-                spinner_progress_bar()
-                print_boxed_safe("Verifying entries after retry...", "CYAN", 60)
+                # Show verification message ONCE before spinner
+                spinner_progress_bar(task_message="Verifying entries after retry...")
 
+                # After spinner, show verification complete and results
                 all_entries = to_import + retry_entries
                 verify_result = verify_restored_entries(all_entries, auth_token)
                 all_verified = True
