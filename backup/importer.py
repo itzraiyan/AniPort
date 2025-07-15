@@ -55,7 +55,7 @@ def calculate_dynamic_eta(entries_count, sample_entries=10, sample_timeout=30):
     for i in range(sample_size):
         tick_start = time.time()
         # Simulated entry processing time
-        time.sleep(0.7)  # Base processing time updated from 0.5 to 0.7
+        time.sleep(0.5)  # Base processing time
         entries_processed += 1
         
         # Check if we hit a rate limit
@@ -274,11 +274,6 @@ def filter_entries_already_present(entries, auth_token):
     return to_import, already_present
 
 def import_workflow():
-    current_time = get_current_utc()
-    current_user = get_user_login()
-    
-    print_boxed_safe(f"Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {current_time}", "CYAN", 60)
-    print_boxed_safe(f"Current User's Login: {current_user}", "CYAN", 60)
     print_info("Let's restore your AniList from a backup JSON!")
 
     filepath = None
@@ -337,14 +332,13 @@ def import_workflow():
     entries_count = len(to_import)
     total_eta, avg_entry_time, expected_rate_limits = calculate_dynamic_eta(entries_count)
     
-    total_seconds = int(total_eta)
-    days, remainder = divmod(total_seconds, 86400)
-    hours, remainder = divmod(remainder, 3600)
-    mins, secs = divmod(remainder, 60)
-    if days > 0:
-        eta_str = f"{days}d {hours:02d}:{mins:02d}:{secs:02d}"
-    else:
+    mins, secs = divmod(int(total_eta), 60)
+    hours, mins = divmod(mins, 60)
+    
+    if hours > 0:
         eta_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
+    else:
+        eta_str = f"{mins:02d}:{secs:02d}"
 
     print_boxed_safe(
         "AniList has API rate limits, importing might take a while. You can do other stuff in the meantime.",
