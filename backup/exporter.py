@@ -8,6 +8,7 @@ Coordinates the export (backup) workflow:
 - Fetches list(s), applies filters, saves as JSON in output/.
 - Shows progress and summary.
 - Now shows detailed stats (exported/skipped, time taken, responsive output).
+- Verifies username/account match for private export, with prompt to regenerate or continue.
 """
 
 import time
