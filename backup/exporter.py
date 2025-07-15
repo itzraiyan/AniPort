@@ -15,14 +15,15 @@ from ui.prompts import (
     prompt_boxed, print_info, print_success, print_error,
     confirm_boxed, menu_boxed, print_progress_bar
 )
-from anilist.api import get_user_id, fetch_list
-from anilist.auth import interactive_oauth, get_saved_token, list_saved_accounts
+from anilist.api import get_user_id, fetch_list, get_viewer_info
+from anilist.auth import interactive_oauth, get_saved_token, list_saved_accounts, save_account_token
 from backup.output import get_output_path, save_json_backup, ensure_output_dir
 from ui.helptext import USERNAME_HELP, EXPORT_PRIVACY_HELP, EXPORT_STATUS_HELP, EXPORT_TITLE_HELP, EXPORT_TYPE_HELP
 
 def export_workflow():
     ensure_output_dir()
     username = None
+    # 1. Ask for username
     while not username:
         username = prompt_boxed(
             "Enter your AniList username (type '-help' for help)",
@@ -34,9 +35,9 @@ def export_workflow():
     use_oauth = False
     auth_token = None
 
+    # 2. Decide privacy (and possibly OAuth)
     if token:
         print_info(f"Found a saved AniList OAuth token for '{username}'.")
-        # Offer quick options for export type
         privacy_option = menu_boxed(
             f"Do you want to use your saved token for '{username}' to export private + public entries?",
             [
@@ -52,7 +53,6 @@ def export_workflow():
             use_oauth = False
             auth_token = None
     else:
-        # No saved token for this account; normal privacy prompt
         privacy = menu_boxed(
             "Does your AniList list include private entries?",
             ["No (public only)", "Yes (private + public)"],
@@ -62,6 +62,46 @@ def export_workflow():
         if use_oauth:
             print_info("You will need AniList API credentials. Follow the prompts!")
             _, auth_token = interactive_oauth(username)
+
+    # 3. If private, verify token account matches entered username
+    if use_oauth and auth_token:
+        # Get actual account info from token
+        viewer_info = get_viewer_info(auth_token)
+        if not viewer_info:
+            print_error("Failed to fetch authenticated account info. Aborting export.")
+            return
+        token_username = viewer_info["username"]
+        print_info(f"Authenticated AniList account: {token_username} (ID: {viewer_info['id']})")
+        if username != token_username:
+            print_error(
+                f"Username mismatch: You entered '{username}', but the authenticated account is '{token_username}'."
+            )
+            # Prompt user: Continue or regenerate
+            choice = menu_boxed(
+                "Do you want to continue anyway with this authenticated account, or regenerate authentication for your entered username?",
+                [
+                    f"Continue as '{token_username}' (proceed with export)",
+                    f"Regenerate authentication for '{username}'"
+                ]
+            )
+            if choice == 2:
+                # Re-do OAuth for the entered username
+                print_info(f"Please re-authenticate for username: {username}")
+                _, auth_token = interactive_oauth(username)
+                # Update token in saved accounts JSON
+                save_account_token(username, auth_token)
+                # Verify again, should match now
+                viewer_info = get_viewer_info(auth_token)
+                if not viewer_info:
+                    print_error("Failed to fetch account info after re-authentication. Aborting export.")
+                    return
+                token_username = viewer_info["username"]
+                print_info(f"Authenticated AniList account: {token_username} (ID: {viewer_info['id']})")
+                if username != token_username:
+                    print_error("Still mismatched after re-authentication. Proceeding anyway as authenticated account.")
+            else:
+                # Proceed with authenticated account (token_username)
+                username = token_username
 
     # Export type: anime, manga, or both
     exptype = menu_boxed(
@@ -85,7 +125,6 @@ def export_workflow():
             color="YELLOW",
             helpmsg=EXPORT_STATUS_HELP + "\n" + status_options
         )
-        # Simple parser for statuses
         status_map = {
             "1": "COMPLETED", "2": "CURRENT", "3": "DROPPED",
             "4": "PAUSED", "5": "PLANNING", "6": "REPEATING",
@@ -135,19 +174,16 @@ def export_workflow():
             total = len(entries)
             stats[media_type] = {
                 "exported": total,
-                "filtered": "filtered"  # We don't track skipped here, but can later.
+                "filtered": "filtered"
             }
             if not entries:
                 print_error(f"No {media_type.lower()} entries found.")
                 continue
             filename = get_output_path(username, media_type.lower())
-            # Save as single dict if both anime and manga, else just a list
             exported[media_type.lower()] = entries
             if len(tasks) == 1:
-                # Just anime or manga: save list only
                 save_json_backup(entries, filename)
             else:
-                # Both: save after both fetched
                 continue
         except Exception as e:
             print_error(f"Error exporting {media_type.lower()}: {e}")
@@ -156,7 +192,6 @@ def export_workflow():
         save_json_backup(exported, filename)
 
     elapsed = time.time() - start
-    # Print stats
     print_success("Export complete! Your backup(s) are in the output/ folder.")
     print_info("Export stats:")
     for k in exported:
