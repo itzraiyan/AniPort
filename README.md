@@ -60,7 +60,6 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
    **Important:** You must install all dependencies, including `rich` for optimal color support!
 
    ```sh
-   pip install --upgrade pip
    pip install -r requirements.txt rich
    ```
 
@@ -92,7 +91,6 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 3. **Install dependencies (including `rich`):**
 
    ```sh
-   pip3 install --upgrade pip
    pip3 install -r requirements.txt rich
    ```
 
@@ -121,7 +119,6 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 4. **Install dependencies (including `rich`):**
 
    ```bat
-   pip install --upgrade pip
    pip install -r requirements.txt rich
    ```
 
