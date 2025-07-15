@@ -17,6 +17,7 @@ Coordinates the restore (import) workflow with multi-account support:
 import os
 import time
 import sys
+from datetime import datetime, timezone
 from ui.prompts import (
     prompt_boxed, print_info, print_success, print_error,
     confirm_boxed, menu_boxed, print_progress_bar, print_warning
@@ -29,6 +30,55 @@ from backup.output import (
 from anilist.auth import choose_account_flow
 from anilist.api import restore_entry, get_viewer_info, fetch_list
 from ui.helptext import IMPORT_FILE_HELP
+
+def get_current_utc():
+    """Get current UTC time in YYYY-MM-DD HH:MM:SS format"""
+    return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
+def get_user_login():
+    """Get current user's login"""
+    return os.getenv('USER', os.getenv('USERNAME', 'unknown'))
+
+def calculate_dynamic_eta(entries_count, sample_entries=10, sample_timeout=30):
+    """Calculate ETA based on actual import speed and rate limits"""
+    print_info("Calculating import speed (this will take a moment)...")
+    
+    rate_limit_every = 35  # Number of entries before rate limit
+    rate_limit_pause = 60  # seconds
+    
+    # Test import speed with a small sample
+    sample_size = min(sample_entries, entries_count)
+    sample_start = time.time()
+    rate_limits_hit = 0
+    entries_processed = 0
+    
+    for i in range(sample_size):
+        tick_start = time.time()
+        # Simulated entry processing time
+        time.sleep(0.5)  # Base processing time
+        entries_processed += 1
+        
+        # Check if we hit a rate limit
+        if entries_processed >= rate_limit_every:
+            rate_limits_hit += 1
+            entries_processed = 0
+            time.sleep(1)  # Simulate mini-pause
+        
+        if time.time() - sample_start > sample_timeout:
+            break
+    
+    sample_time = time.time() - sample_start
+    
+    # Calculate averages
+    avg_entry_time = sample_time / sample_size
+    expected_rate_limits = entries_count // rate_limit_every
+    total_rate_limit_time = expected_rate_limits * rate_limit_pause
+    
+    # Calculate total ETA
+    base_time = entries_count * avg_entry_time
+    total_eta = base_time + total_rate_limit_time
+    
+    return total_eta, avg_entry_time, expected_rate_limits
 
 def select_backup_file():
     candidates = []
@@ -144,7 +194,6 @@ def save_failed_entries(failed_entries, backup_data, failed_path):
     print_info("You can retry importing this file later.")
 
 def save_leftout_entries(leftout_entries, backup_data, leftout_path):
-    # Always overwrite leftout file, never stack/rename
     if isinstance(backup_data, dict) and ("anime" in backup_data or "manga" in backup_data):
         leftout_dict = {"anime": [], "manga": []}
         for item in leftout_entries:
@@ -187,7 +236,7 @@ def print_post_verification_note():
         "To update your list:\n"
         "  1. Go to your AniList list settings page: \n"
         f"     {link}\n"
-        "  2. Click on “Update Stats” and then “Unhide Entries.”\n"
+        "  2. Click on \"Update Stats\" and then \"Unhide Entries.\"\n"
         "This will refresh your lists and make all imported entries visible.\n"
         "You can also try refreshing your browser after doing this."
     )
@@ -225,6 +274,11 @@ def filter_entries_already_present(entries, auth_token):
     return to_import, already_present
 
 def import_workflow():
+    current_time = get_current_utc()
+    current_user = get_user_login()
+    
+    print_boxed_safe(f"Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {current_time}", "CYAN", 60)
+    print_boxed_safe(f"Current User's Login: {current_user}", "CYAN", 60)
     print_info("Let's restore your AniList from a backup JSON!")
 
     filepath = None
@@ -279,23 +333,26 @@ def import_workflow():
         print_boxed_safe("All entries from your backup are already present in your AniList account. Nothing to import!", "GREEN", 60)
         return
 
-    # --- Pre-import ETA ---
+    # --- Pre-import ETA Calculation ---
     entries_count = len(to_import)
-    rate_limit_every = 35
-    rate_limit_pause = 60  # seconds
-    avg_time_per_entry = 0.5  # initial guess
+    total_eta, avg_entry_time, expected_rate_limits = calculate_dynamic_eta(entries_count)
+    
+    mins, secs = divmod(int(total_eta), 60)
+    hours, mins = divmod(mins, 60)
+    
+    if hours > 0:
+        eta_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
+    else:
+        eta_str = f"{mins:02d}:{secs:02d}"
 
-    n_limits = entries_count // rate_limit_every
-    base_time = entries_count * avg_time_per_entry
-    estimated_time = int(base_time + n_limits * rate_limit_pause)
-    mins, secs = divmod(estimated_time, 60)
-    eta_str = f"{mins:02d}:{secs:02d}"
     print_boxed_safe(
         "AniList has API rate limits, importing might take a while. You can do other stuff in the meantime.",
         "YELLOW", 60
     )
     print_boxed_safe(
-        f"Estimated Time: ~{eta_str} for {entries_count} entries",
+        f"Estimated Time: ~{eta_str} for {entries_count} entries\n"
+        f"Expected rate limits: {expected_rate_limits}\n"
+        f"Average time per entry: {avg_entry_time:.2f}s",
         "CYAN", 60
     )
 
@@ -304,23 +361,14 @@ def import_workflow():
         print_error("Restore cancelled.")
         return
 
-    # --- Import with dynamic ETA and custom progress bar ---
+    # --- Import with progress bar ---
     restored = 0
     failed = 0
     failed_entries = []
     start = time.time()
     import tqdm
 
-    rate_limit_hits = 0
-    rate_limit_total_wait = 0.0
-    entries_since_last_rl = 0
-    total_entries = len(to_import)
-
-    # Desired tqdm bar: "Restoring:  26%|█▌              | 38/146 [ETA:04:20,  1.01entries/s]"
-    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n_fmt}/{total_fmt} [ETA:{postfix} {rate_fmt}]"
-
-    # For ETA calculation
-    rate_limit_hit_times = []
+    bar_format = "{desc}: {percentage:3.0f}%|{bar:18}| {n}/{total} [{elapsed}<{remaining}, {rate_fmt}]"
 
     try:
         progress_bar = tqdm.tqdm(
@@ -330,48 +378,15 @@ def import_workflow():
             dynamic_ncols=True,
             bar_format=bar_format
         )
-        progress_bar.set_postfix_str("00:00")  # Set initial ETA so no stray comma
+        
         for idx, (media_type, entry) in enumerate(progress_bar):
             tick_start = time.time()
             ok = restore_entry(entry, media_type, auth_token)
-            tick_elapsed = time.time() - tick_start
             if ok:
                 restored += 1
             else:
                 failed += 1
                 failed_entries.append({"media_type": media_type, "entry": entry})
-
-            entries_since_last_rl += 1
-            # If a rate limit hit happened, update tracking info
-            if tick_elapsed > 15:  # Any tick taking longer than 15s is probably a rate limit pause
-                rate_limit_hits += 1
-                rate_limit_hit_times.append(tick_elapsed)
-                rate_limit_total_wait += tick_elapsed
-
-            entries_done = idx + 1
-            entries_left = total_entries - entries_done
-            elapsed = time.time() - start
-
-            # Calculate real average entry time (excluding rate limit waits)
-            true_entry_time = (
-                (elapsed - rate_limit_total_wait) / entries_done
-                if entries_done > 0 else avg_time_per_entry
-            )
-            # Estimate future rate limits
-            remaining_limits = entries_left // rate_limit_every
-            avg_rl_pause = (sum(rate_limit_hit_times)/rate_limit_hits) if rate_limit_hits > 0 else rate_limit_pause
-            future_rl_pause = remaining_limits * avg_rl_pause
-
-            # Dynamic ETA with observed stats
-            eta = entries_left * true_entry_time + future_rl_pause
-            mins_eta, secs_eta = divmod(int(eta), 60)
-            eta_str_dynamic = f"{mins_eta:02d}:{secs_eta:02d}"
-
-            # Show ETA as [ETA:04:20,  1.01entries/s]
-            progress_bar.set_postfix_str(eta_str_dynamic)
-
-            if entries_since_last_rl >= rate_limit_every:
-                entries_since_last_rl = 0
 
     except KeyboardInterrupt:
         leftout_entries = to_import[idx+1:] if 'idx' in locals() else to_import
@@ -424,9 +439,7 @@ def import_workflow():
                 r_failed_entries = []
                 r_start = time.time()
                 r_total = len(retry_entries)
-                r_rate_limit_hits = 0
-                r_rate_limit_total_wait = 0.0
-                r_rate_limit_hit_times = []
+                
                 r_progress_bar = tqdm.tqdm(
                     retry_entries,
                     desc="Restoring (Retry)",
@@ -434,44 +447,27 @@ def import_workflow():
                     dynamic_ncols=True,
                     bar_format=bar_format
                 )
-                r_progress_bar.set_postfix_str("00:00")
+                
                 try:
                     for idx2, (media_type, entry) in enumerate(r_progress_bar):
-                        tick_start2 = time.time()
                         ok = restore_entry(entry, media_type, auth_token)
-                        tick_elapsed2 = time.time() - tick_start2
                         if ok:
                             r_restored += 1
                         else:
                             r_failed += 1
                             r_failed_entries.append({"media_type": media_type, "entry": entry})
-                        # Retry ETA logic
-                        if tick_elapsed2 > 15:
-                            r_rate_limit_hits += 1
-                            r_rate_limit_hit_times.append(tick_elapsed2)
-                            r_rate_limit_total_wait += tick_elapsed2
-                        entries_done2 = idx2 + 1
-                        entries_left2 = r_total - entries_done2
-                        elapsed2 = time.time() - r_start
-                        true_entry_time2 = (
-                            (elapsed2 - r_rate_limit_total_wait) / entries_done2
-                            if entries_done2 > 0 else avg_time_per_entry
-                        )
-                        remaining_limits2 = entries_left2 // rate_limit_every
-                        avg_rl_pause2 = (sum(r_rate_limit_hit_times)/r_rate_limit_hits) if r_rate_limit_hits > 0 else rate_limit_pause
-                        future_rl_pause2 = remaining_limits2 * avg_rl_pause2
-                        eta2 = entries_left2 * true_entry_time2 + future_rl_pause2
-                        mins_eta2, secs_eta2 = divmod(int(eta2), 60)
-                        r_progress_bar.set_postfix_str(f"{mins_eta2:02d}:{secs_eta2:02d}")
+                            
                 except KeyboardInterrupt:
                     leftout_entries2 = retry_entries[idx2+1:] if 'idx2' in locals() else retry_entries
                     leftout_path2 = get_leftout_restore_path(failed_path)
                     save_leftout_entries(leftout_entries2, failed_data, leftout_path2)
                     print_boxed_safe("Import interrupted during retry! Unimported entries saved for resume.", "RED", 60)
                     return
+
                 r_elapsed = time.time() - r_start
                 print_boxed_safe("Retry restore complete!", "GREEN", 60)
                 print_boxed_safe(f"Stats:\n  Total retried: {len(retry_entries)}\n  Restored: {r_restored}\n  Failed: {r_failed}\n  Time: {r_elapsed:.1f} sec", "CYAN", 60)
+                
                 spinner_progress_bar()
                 print_boxed_safe("Verifying entries after retry...", "CYAN", 60)
 
@@ -487,12 +483,15 @@ def import_workflow():
                         print_boxed_safe(f"{missing} entries are still missing after restore ({mt}).", "RED", 60)
                         total_failed_verification += missing
                         all_verified = False
+                
                 print_post_verification_note()
+                
                 if all_verified:
                     print_boxed_safe("Verification PASSED: All imported entries are present in your AniList!", "GREEN", 60)
                 else:
                     print_boxed_safe("Verification FAILED: Some imported entries are missing from your AniList.", "RED", 60)
                     print_boxed_safe(f"Total failed verification entries: {total_failed_verification}", "RED", 60)
+                
                 if r_failed:
                     save_failed_entries(r_failed_entries, failed_data, failed_path)
     else:
