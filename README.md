@@ -1,9 +1,6 @@
 # AniPort: AniList Backup & Restore Tool ⚙️
 
 ![AniPort Banner](https://files.catbox.moe/jx8op2.png)
-
-> **Note:** This project contains AI-generated content. While much of the code and documentation is crafted with the help of AI tools, the overall design and intent are shaped by the project owner.
-
 ---
 
 AniPort is a beginner-friendly, interactive Python tool for **backing up and restoring your AniList anime and manga lists**. Whether you want a safe copy of your lists, plan to migrate data, or just like to keep your anime and manga adventures safe, AniPort has you covered.
@@ -506,9 +503,9 @@ AniPort is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 🛑 Disclaimer
+## 🟡 Note
 
-> **This project contains AI-generated content. Use at your own risk, and always review code before running.**
+> **This project contains AI-generated content.**
 
 ---
 
