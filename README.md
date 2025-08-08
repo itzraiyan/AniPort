@@ -503,12 +503,6 @@ AniPort is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 🟡 Note
-
-> **This project contains AI-generated content.**
-
----
-
 **Enjoy AniPort—and may your anime adventures live on forever!**  
 *“No matter how deep the night, it always turns to day, eventually.”* – Brook
 
