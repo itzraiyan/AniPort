@@ -29,6 +29,10 @@ AniPort is a beginner-friendly, interactive Python tool for **backing up and res
 
 ---
 
+![Hit Counter](https://count.getloli.com/@AniPory?name=AniPory&theme=rule34&padding=7&offset=0&align=center&scale=1&pixelated=1&darkmode=0)
+
+---
+
 ## 📦 Installation & Quickstart (Now Even More Step-by-Step & Non-Interactive!)
 
 ### 🟩 Android (Termux) – **Recommended for Mobile Users**
